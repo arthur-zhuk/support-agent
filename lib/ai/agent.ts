@@ -25,14 +25,14 @@ export async function createAgent({
     execute: async ({ query }) => {
       const results = await searchKnowledgeBase({ tenantId, query })
       return {
-        results: results.map(r => ({
+        results: results.map((r: any) => ({
           content: r.content,
           source: r.source,
           score: r.score,
         })),
       }
     },
-  })
+  } as any)
 
   const allTools = {
     ...shopifyTools,
