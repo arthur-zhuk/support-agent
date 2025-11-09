@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
 
     const stream = result.toTextStreamResponse()
 
-    result.textStream.then(async () => {
-      const updatedMessages = [...messages, { role: 'assistant', content: await result.text }]
+    result.text.then(async (finalText) => {
+      const updatedMessages = [...messages, { role: 'assistant' as const, content: finalText }]
 
       await prisma.conversation.upsert({
         where: {
