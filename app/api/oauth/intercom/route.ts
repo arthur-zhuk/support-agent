@@ -9,10 +9,10 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams
   const code = searchParams.get('code')
   const state = searchParams.get('state')
-  const tenantId = state || searchParams.get('tenantId')
+  const tenantId = state || searchParams.get('tenantId') || 'demo-tenant'
 
-  if (!code || !tenantId) {
-    return NextResponse.json({ error: 'Missing code or state parameter' }, { status: 400 })
+  if (!code) {
+    return NextResponse.json({ error: 'Missing authorization code' }, { status: 400 })
   }
 
   const response = await fetch('https://api.intercom.io/auth/eagle/token', {
@@ -57,6 +57,9 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  return NextResponse.redirect(`${process.env.NEXTAUTH_URL}/dashboard/connections?connected=intercom`)
+  const baseUrl = process.env.NEXTAUTH_URL || 
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  
+  return NextResponse.redirect(`${baseUrl}/dashboard/connections?connected=intercom`)
 }
 

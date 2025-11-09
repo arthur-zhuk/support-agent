@@ -17,12 +17,17 @@ async function getConnections(tenantId: string) {
   }
 }
 
-export default async function ConnectionsPage() {
+export default async function ConnectionsPage({
+  searchParams,
+}: {
+  searchParams: { connected?: string }
+}) {
   const tenantId = 'demo-tenant'
 
   const connections = await getConnections(tenantId)
   const shopifyConnected = connections.some(c => c.type === 'shopify')
   const intercomConnected = connections.some(c => c.type === 'intercom')
+  const justConnected = searchParams?.connected
 
   return (
     <div className="container mx-auto py-8">
@@ -31,6 +36,13 @@ export default async function ConnectionsPage() {
         <p className="text-muted-foreground mt-2">
           Connect your services to enable order-aware support features
         </p>
+        {justConnected && (
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-green-800">
+              ✅ Successfully connected {justConnected === 'intercom' ? 'Intercom' : 'Shopify'}!
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
