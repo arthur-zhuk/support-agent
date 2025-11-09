@@ -17,12 +17,11 @@ async function getConnections(tenantId: string) {
   }
 }
 
-export default async function ConnectionsPage({
-  searchParams,
-}: {
-  searchParams: { connected?: string }
+export default async function ConnectionsPage(props: {
+  searchParams: Promise<{ connected?: string }>
 }) {
   const tenantId = 'demo-tenant'
+  const searchParams = await props.searchParams
 
   const connections = await getConnections(tenantId)
   const shopifyConnected = connections.some(c => c.type === 'shopify')
