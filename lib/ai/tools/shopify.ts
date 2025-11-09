@@ -118,7 +118,7 @@ export function getShopifyTools(tenantId: string) {
               refund: {
                 notify: true,
                 note: 'Return requested via support agent',
-                refund_line_items: items.map(item => ({
+                refund_line_items: items.map((item: any) => ({
                   line_item_id: item.lineItemId,
                   quantity: item.quantity,
                 })),
