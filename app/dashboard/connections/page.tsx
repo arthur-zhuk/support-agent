@@ -106,7 +106,7 @@ export default async function ConnectionsPage(props: {
             ) : (
               <Button asChild>
                 <Link
-                  href={`https://app.intercom.com/oauth?client_id=${process.env.INTERCOM_CLIENT_ID || ''}&redirect_uri=${encodeURIComponent((process.env.INTERCOM_REDIRECT_URI || process.env.NEXTAUTH_URL || 'http://localhost:3000') + '/api/oauth/intercom')}&state=${tenantId}`}
+                  href={`https://app.intercom.com/oauth?client_id=${process.env.INTERCOM_CLIENT_ID || ''}&redirect_uri=${encodeURIComponent(process.env.INTERCOM_REDIRECT_URI || `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/oauth/intercom`)}&state=${tenantId}`}
                 >
                   Connect Intercom
                 </Link>
