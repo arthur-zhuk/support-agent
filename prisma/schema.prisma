@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  connections  Connection[]
+  knowledgeBases KnowledgeBase[]
+  conversations Conversation[]
+  toolRuns     ToolRun[]
+  metrics      MetricsDaily[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Connection {
+  id        String   @id @default(cuid())
+  tenantId  String
+  type      String
+  scopes    String[]
+  token     String
+  refreshToken String?
+  expiresAt DateTime?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, type])
+  @@index([tenantId, type])
+}
+
+model KnowledgeBase {
+  id          String   @id @default(cuid())
+  tenantId    String
+  source      String
+  sourceType  String
+  chunks      Chunk[]
+  metadata    Json?
+  lastCrawled DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, source])
+  @@index([tenantId])
+}
+
+model Chunk {
+  id             String        @id @default(cuid())
+  knowledgeBaseId String
+  content        String        @db.Text
+  embedding      Unsupported("vector(1536)")
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  knowledgeBase KnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  @@index([knowledgeBaseId])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  tenantId  String
+  sessionId String
+  messages  Json[]
+  citations String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, sessionId])
+  @@index([tenantId, sessionId])
+}
+
+model ToolRun {
+  id           String   @id @default(cuid())
+  tenantId     String
+  conversationId String?
+  toolName     String
+  args         Json
+  result       Json?
+  success      Boolean
+  error        String?
+  createdAt    DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+}
+
+model OrderMirror {
+  id        String   @id @default(cuid())
+  tenantId  String
+  orderId   String
+  email     String
+  status    String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, orderId])
+  @@index([tenantId, email])
+}
+
+model MetricsDaily {
+  id            String   @id @default(cuid())
+  tenantId      String
+  date          DateTime @db.Date
+  conversations Int      @default(0)
+  deflections   Int      @default(0)
+  escalations   Int      @default(0)
+  toolRuns      Int      @default(0)
+  costEstimate  Float    @default(0)
+  createdAt     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, date])
+  @@index([tenantId, date])
+}

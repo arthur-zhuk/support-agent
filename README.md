@@ -1,36 +1,219 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Support Agent - Order-Aware AI Support Widget
+
+A B2B SaaS that converts your store's documentation and storefront data into an intelligent, order-aware support agent. Built with Next.js 16, AI SDK v6, and designed for marketplace distribution (Shopify App Store, Intercom App Store).
+
+## Features
+
+- **AI-Powered Support Agent**: Uses OpenAI GPT-4o with tool-calling to answer questions, check order status, process returns, and escalate to human agents
+- **Knowledge Base RAG**: Ingest URLs, sitemaps, or files to build a searchable knowledge base with vector embeddings
+- **Shopify Integration**: Connect your Shopify store to enable order lookup, returns, cancellations, and return label generation
+- **Intercom Integration**: Seamlessly escalate conversations to Intercom with full context
+- **Embeddable Widget**: Copy-paste script tag to embed the support agent on any website
+- **Analytics Dashboard**: Track conversations, deflections, escalations, and cost estimates
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **AI**: AI SDK v6 with OpenAI GPT-4o
+- **Database**: PostgreSQL with Prisma ORM and pgvector extension
+- **Embeddings**: OpenAI text-embedding-3-small
+- **Integrations**: Shopify Admin API, Intercom API
+- **UI Components**: shadcn/ui with Tailwind CSS
+- **MCP Integration**: Next.js MCP, Vercel MCP, and shadcn MCP for enhanced development experience
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- PostgreSQL database with pgvector extension
+- OpenAI API key
+- Shopify Partner account (for OAuth app)
+- Intercom developer account (for OAuth app)
+
+### MCP Integration
+
+This project is configured with Model Context Protocol (MCP) servers for enhanced development:
+
+- **Next.js MCP**: Provides real-time error detection, project metadata, and development insights
+- **Vercel MCP**: Enables deployment and configuration management
+- **shadcn MCP**: Facilitates component management and styling
+
+The `.mcp.json` file is already configured. When you start your dev server, MCP-compatible coding assistants can automatically discover and connect to provide context-aware assistance.
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <your-repo-url>
+cd support-agent
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+Create a `.env` file in the root directory:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/support_agent?schema=public"
 
-## Learn More
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-key-here"
 
-To learn more about Next.js, take a look at the following resources:
+OPENAI_API_KEY="sk-..."
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+SHOPIFY_API_KEY="your-shopify-api-key"
+SHOPIFY_API_SECRET="your-shopify-api-secret"
+SHOPIFY_APP_URL="http://localhost:3000"
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+INTERCOM_CLIENT_ID="your-intercom-client-id"
+INTERCOM_CLIENT_SECRET="your-intercom-client-secret"
+INTERCOM_REDIRECT_URI="http://localhost:3000/api/oauth/intercom"
 
-## Deploy on Vercel
+JWT_SECRET="your-jwt-secret-key"
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. Set up the database:
+```bash
+npx prisma generate
+npx prisma migrate dev
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+5. Run the development server:
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to see the dashboard.
+
+## Usage
+
+### 1. Connect Integrations
+
+Navigate to `/dashboard/connections` and connect:
+- **Shopify**: Click "Connect" and authorize the app
+- **Intercom**: Click "Connect" and authorize the app
+
+### 2. Build Knowledge Base
+
+Go to `/dashboard/knowledge` and:
+- Add URLs (e.g., `https://yourstore.com/help`)
+- Add sitemaps for bulk ingestion
+- Upload files (PDF, Markdown, etc.)
+
+The system will automatically:
+- Crawl and parse content
+- Chunk text into searchable segments
+- Generate vector embeddings
+- Store in PostgreSQL with pgvector
+
+### 3. Embed Widget
+
+Copy the embed script from the Knowledge Base page and add it to your website:
+
+```html
+<script src="http://localhost:3000/api/embed?tenantId=your-tenant-id"></script>
+```
+
+The widget will appear as a chat bubble in the bottom-right corner.
+
+### 4. View Analytics
+
+Check `/dashboard/analytics` for:
+- Total conversations
+- Deflection rate
+- Escalation count
+- Cost estimates
+
+## API Routes
+
+### Chat API
+`POST /api/chat`
+- Streams AI responses with tool-calling
+- Requires: `tenantId`, `sessionId`, `messages`
+
+### Knowledge Ingestion
+`POST /api/knowledge/ingest`
+- Ingests a URL into the knowledge base
+- Requires: `tenantId`, `url`
+
+### OAuth Callbacks
+- `GET /api/oauth/shopify` - Shopify OAuth callback
+- `GET /api/oauth/intercom` - Intercom OAuth callback
+
+### Embed Widget
+`GET /api/embed?tenantId=...`
+- Returns embeddable JavaScript widget
+
+## Architecture
+
+### AI Agent (`lib/ai/agent.ts`)
+- Orchestrates tool-calling with structured outputs
+- Integrates Shopify tools, Intercom tools, and knowledge search
+- Streams responses using AI SDK v6
+
+### Tools (`lib/ai/tools/`)
+- **Shopify**: Order lookup, returns, cancellations, label generation
+- **Intercom**: Ticket creation, escalation with context
+
+### RAG System (`lib/rag/`)
+- **Ingest**: URL crawling, sitemap parsing, file processing
+- **Search**: Vector similarity search with pgvector
+
+### Database Schema
+- Multi-tenant architecture with row-level isolation
+- Stores connections, knowledge bases, chunks, conversations, tool runs, and metrics
+
+## Marketplace Distribution
+
+### Shopify App Store
+1. Create a Shopify Partner account
+2. Create a new app with OAuth scopes: `read_orders`, `write_orders`
+3. Set redirect URI: `https://yourdomain.com/api/oauth/shopify`
+4. Submit for review
+
+### Intercom App Store
+1. Create an Intercom developer account
+2. Register OAuth app with redirect URI: `https://yourdomain.com/api/oauth/intercom`
+3. Submit for review
+
+## Development
+
+### Database Migrations
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
+
+### Type Checking
+```bash
+npm run lint
+```
+
+### Build for Production
+```bash
+npm run build
+npm start
+```
+
+## Roadmap
+
+- [ ] Stripe billing integration
+- [ ] Zendesk connector
+- [ ] Gorgias connector
+- [ ] Notion/Google Docs ingestion
+- [ ] Multi-language support
+- [ ] Custom branding/theming
+- [ ] Advanced analytics and reporting
+- [ ] A/B testing for prompts
+
+## License
+
+MIT
+
+## Support
+
+For issues and questions, please open an issue on GitHub.
