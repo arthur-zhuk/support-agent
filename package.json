@@ -16,6 +16,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@shopify/shopify-api": "^12.1.1",
     "@stripe/stripe-js": "^8.3.0",
+    "@vercel/postgres": "^0.10.0",
     "ai": "^5.0.89",
     "axios": "^1.13.2",
     "cheerio": "^1.1.2",
