@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MessageSquare, CheckCircle2, ArrowUpRight, TrendingUp } from 'lucide-react'
+import type { MetricsDaily } from '@prisma/client'
 
-async function getMetrics(tenantId: string) {
+async function getMetrics(tenantId: string): Promise<MetricsDaily[]> {
   try {
     const { prisma } = await import('@/lib/db/prisma')
     const metrics = await prisma.metricsDaily.findMany({
@@ -21,9 +22,9 @@ export default async function AnalyticsPage() {
 
   const metrics = await getMetrics(tenantId)
 
-  const totalConversations = metrics.reduce((sum: number, m: any) => sum + (m.conversations || 0), 0)
-  const totalDeflections = metrics.reduce((sum: number, m: any) => sum + (m.deflections || 0), 0)
-  const totalEscalations = metrics.reduce((sum: number, m: any) => sum + (m.escalations || 0), 0)
+  const totalConversations = metrics.reduce((sum, m) => sum + (m.conversations || 0), 0)
+  const totalDeflections = metrics.reduce((sum, m) => sum + (m.deflections || 0), 0)
+  const totalEscalations = metrics.reduce((sum, m) => sum + (m.escalations || 0), 0)
   const deflectionRate = totalConversations > 0 
     ? ((totalDeflections / totalConversations) * 100).toFixed(1) 
     : '0'
@@ -83,9 +84,9 @@ export default async function AnalyticsPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              ${metrics.reduce((sum: number, m: any) => sum + (m.costEstimate || 0), 0).toFixed(2)}
-            </div>
+              <div className="text-2xl font-bold">
+                ${metrics.reduce((sum, m) => sum + (m.costEstimate || 0), 0).toFixed(2)}
+              </div>
             <p className="text-xs text-muted-foreground mt-1">
               Estimated AI costs
             </p>
@@ -102,8 +103,8 @@ export default async function AnalyticsPage() {
           {metrics.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No data yet</p>
           ) : (
-            <div className="space-y-4">
-              {metrics.map((metric: any) => (
+              <div className="space-y-4">
+                {metrics.map((metric) => (
                 <div key={metric.id} className="flex items-center justify-between border-b pb-4 last:border-0">
                   <div>
                     <p className="font-medium">

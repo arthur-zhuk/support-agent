@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db/prisma'
 import * as cheerio from 'cheerio'
 import SitemapParser from 'sitemap-parser'
+import type { SitemapData, SitemapUrl } from '@/lib/types/rag'
+import { Prisma } from '@prisma/client'
 
 async function fetchAndParseUrl(url: string): Promise<{ content: string; title: string }> {
   const response = await fetch(url)
@@ -87,14 +89,10 @@ export async function ingestUrl({
   for (const chunk of chunks) {
     const embedding = await generateEmbedding(chunk)
 
-    await (prisma as any).chunk.create({
-      data: {
-        knowledgeBaseId: knowledgeBase.id,
-        content: chunk,
-        embedding: `[${embedding.join(',')}]`,
-        metadata: { source: url, title },
-      },
-    })
+    await prisma.$executeRaw`
+      INSERT INTO "Chunk" ("knowledgeBaseId", content, embedding, metadata, "createdAt")
+      VALUES (${knowledgeBase.id}, ${chunk}, ${`[${embedding.join(',')}]`}::vector, ${JSON.stringify({ source: url, title })}::jsonb, NOW())
+    `
   }
 
   return { knowledgeBaseId: knowledgeBase.id, chunksCount: chunks.length }
@@ -111,14 +109,14 @@ export async function ingestSitemap({
   const urls: string[] = []
   
   return new Promise<string[]>((resolve, reject) => {
-    parser.parse(sitemapUrl, (err: Error | null, sitemap: any) => {
+    parser.parse(sitemapUrl, (err: Error | null, sitemap: SitemapData | null) => {
       if (err) {
         reject(err)
         return
       }
       if (sitemap && sitemap.url) {
         const urlArray = Array.isArray(sitemap.url) ? sitemap.url : [sitemap.url]
-        urlArray.forEach((item: any) => {
+        urlArray.forEach((item: SitemapUrl) => {
           if (item.loc && item.loc[0]) {
             urls.push(item.loc[0])
           }
@@ -187,14 +185,10 @@ export async function ingestFile({
   for (const chunk of chunks) {
     const embedding = await generateEmbedding(chunk)
 
-    await (prisma as any).chunk.create({
-      data: {
-        knowledgeBaseId: knowledgeBase.id,
-        content: chunk,
-        embedding: `[${embedding.join(',')}]`,
-        metadata: { source: fileName },
-      },
-    })
+    await prisma.$executeRaw`
+      INSERT INTO "Chunk" ("knowledgeBaseId", content, embedding, metadata, "createdAt")
+      VALUES (${knowledgeBase.id}, ${chunk}, ${`[${embedding.join(',')}]`}::vector, ${JSON.stringify({ source: fileName })}::jsonb, NOW())
+    `
   }
 
   return { knowledgeBaseId: knowledgeBase.id, chunksCount: chunks.length }

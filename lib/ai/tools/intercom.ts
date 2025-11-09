@@ -1,6 +1,11 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { prisma } from '@/lib/db/prisma'
+import type {
+  IntercomConversationResponse,
+  IntercomTicketParams,
+  IntercomEscalationParams,
+} from '@/lib/types/intercom'
 
 async function getIntercomClient(tenantId: string) {
   const connection = await prisma.connection.findFirst({
@@ -36,7 +41,7 @@ export function getIntercomTools(tenantId: string) {
         priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
         assigneeId: z.string().optional(),
       }),
-      execute: async ({ subject, body, priority, assigneeId }: any) => {
+      execute: async ({ subject, body, priority, assigneeId }: IntercomTicketParams) => {
         const client = await getIntercomClient(tenantId)
 
         const response = await fetch('https://api.intercom.io/conversations', {
@@ -62,7 +67,7 @@ export function getIntercomTools(tenantId: string) {
           return { error: `Failed to create ticket: ${error}` }
         }
 
-        const data = await response.json()
+        const data = (await response.json()) as IntercomConversationResponse
         return {
           success: true,
           ticketId: data.id,
@@ -79,7 +84,7 @@ export function getIntercomTools(tenantId: string) {
         transcript: z.string().describe('Full conversation transcript'),
         customerEmail: z.string().email().optional(),
       }),
-      execute: async ({ conversationId, message, transcript, customerEmail }: any) => {
+      execute: async ({ conversationId, message, transcript, customerEmail }: IntercomEscalationParams) => {
         const client = await getIntercomClient(tenantId)
 
         const escalationBody = `Escalation Request: ${message}\n\nConversation Transcript:\n${transcript}`
@@ -93,10 +98,12 @@ export function getIntercomTools(tenantId: string) {
           },
           body: JSON.stringify({
             type: 'conversation',
-            from: customerEmail ? {
-              type: 'user',
-              email: customerEmail,
-            } : undefined,
+            from: customerEmail
+              ? {
+                  type: 'user',
+                  email: customerEmail,
+                }
+              : undefined,
             body: escalationBody,
             assignee_id: null,
           }),
@@ -107,7 +114,7 @@ export function getIntercomTools(tenantId: string) {
           return { error: `Failed to escalate: ${error}` }
         }
 
-        const data = await response.json()
+        const data = (await response.json()) as IntercomConversationResponse
         return {
           success: true,
           conversationId: data.id,

@@ -1,6 +1,13 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { prisma } from '@/lib/db/prisma'
+import type {
+  ShopifyOrderResponse,
+  ShopifyOrdersResponse,
+  ShopifyRefundResponse,
+  ShopifyOrderLineItem,
+  ShopifyRefundItem,
+} from '@/lib/types/shopify'
 
 async function getShopifyClient(tenantId: string) {
   const connection = await prisma.connection.findFirst({
@@ -35,7 +42,7 @@ export function getShopifyTools(tenantId: string) {
         orderNumber: z.string().optional().describe('Order number (e.g., #1001)'),
         email: z.string().email().optional().describe('Customer email address'),
       }),
-      execute: async ({ orderNumber, email }: any) => {
+      execute: async ({ orderNumber, email }: { orderNumber?: string; email?: string }) => {
         const client = await getShopifyClient(tenantId)
 
         if (orderNumber) {
@@ -53,13 +60,13 @@ export function getShopifyTools(tenantId: string) {
             return { error: 'Order not found' }
           }
 
-          const data = await response.json()
+          const data = (await response.json()) as ShopifyOrderResponse
           return {
             orderNumber: `#${data.order.order_number}`,
             status: data.order.financial_status,
             fulfillmentStatus: data.order.fulfillment_status,
             total: data.order.total_price,
-            items: data.order.line_items.map((item: any) => ({
+            items: data.order.line_items.map((item): ShopifyOrderLineItem => ({
               name: item.name,
               quantity: item.quantity,
               price: item.price,
@@ -83,9 +90,9 @@ export function getShopifyTools(tenantId: string) {
             return { error: 'Failed to fetch orders' }
           }
 
-          const data = await response.json()
+          const data = (await response.json()) as ShopifyOrdersResponse
           return {
-            orders: data.orders.map((order: any) => ({
+            orders: data.orders.map((order) => ({
               orderNumber: `#${order.order_number}`,
               status: order.financial_status,
               fulfillmentStatus: order.fulfillment_status,
@@ -109,7 +116,7 @@ export function getShopifyTools(tenantId: string) {
           reason: z.string().optional(),
         })),
       }),
-      execute: async ({ orderNumber, items }: any) => {
+      execute: async ({ orderNumber, items }: { orderNumber: string; items: Array<{ lineItemId: string; quantity: number; reason?: string }> }) => {
         const client = await getShopifyClient(tenantId)
         const orderId = orderNumber.replace('#', '')
 
@@ -125,7 +132,7 @@ export function getShopifyTools(tenantId: string) {
               refund: {
                 notify: true,
                 note: 'Return requested via support agent',
-                refund_line_items: items.map((item: any) => ({
+                refund_line_items: items.map((item) => ({
                   line_item_id: item.lineItemId,
                   quantity: item.quantity,
                 })),
@@ -139,7 +146,7 @@ export function getShopifyTools(tenantId: string) {
           return { error: `Failed to create return: ${error}` }
         }
 
-        const data = await response.json()
+        const data = (await response.json()) as ShopifyRefundResponse
         return {
           success: true,
           refundId: data.refund.id,
@@ -154,7 +161,7 @@ export function getShopifyTools(tenantId: string) {
         orderNumber: z.string().describe('Order number'),
         reason: z.string().optional().describe('Reason for cancellation'),
       }),
-      execute: async ({ orderNumber, reason }: any) => {
+      execute: async ({ orderNumber, reason }: { orderNumber: string; reason?: string }) => {
         const client = await getShopifyClient(tenantId)
         const orderId = orderNumber.replace('#', '')
 
@@ -180,7 +187,7 @@ export function getShopifyTools(tenantId: string) {
           return { error: `Failed to cancel order: ${error}` }
         }
 
-        const data = await response.json()
+        const data = (await response.json()) as ShopifyOrderResponse
         return {
           success: true,
           cancelled: data.order.cancelled_at !== null,
@@ -194,7 +201,7 @@ export function getShopifyTools(tenantId: string) {
         orderNumber: z.string().describe('Order number'),
         carrier: z.string().optional().describe('Shipping carrier'),
       }),
-      execute: async ({ orderNumber }: any) => {
+      execute: async ({ orderNumber }: { orderNumber: string }) => {
         return {
           success: true,
           labelUrl: `https://example.com/labels/${orderNumber}`,

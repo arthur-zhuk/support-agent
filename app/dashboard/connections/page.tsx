@@ -24,8 +24,8 @@ export default async function ConnectionsPage(props: {
   const searchParams = await props.searchParams
 
   const connections = await getConnections(tenantId)
-  const shopifyConnected = connections.some((c: any) => c.type === 'shopify')
-  const intercomConnected = connections.some((c: any) => c.type === 'intercom')
+  const shopifyConnected = connections.some((c) => c.type === 'shopify')
+  const intercomConnected = connections.some((c) => c.type === 'intercom')
   const justConnected = searchParams?.connected
 
   return (

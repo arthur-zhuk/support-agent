@@ -1,15 +1,24 @@
 import { prisma } from '@/lib/db/prisma'
+import type { KnowledgeBaseChunk } from '@/lib/types/rag'
 
 async function generateEmbedding(text: string): Promise<number[]> {
   const { OpenAI } = await import('openai')
   const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  
+
   const response = await client.embeddings.create({
     model: 'text-embedding-3-small',
     input: text,
   })
 
   return response.data[0].embedding
+}
+
+type RawChunkResult = {
+  id: string
+  content: string
+  knowledgeBaseId: string
+  source: string
+  score: number | string
 }
 
 export async function searchKnowledgeBase({
@@ -20,17 +29,11 @@ export async function searchKnowledgeBase({
   tenantId: string
   query: string
   limit?: number
-}) {
+}): Promise<KnowledgeBaseChunk[]> {
   const queryEmbedding = await generateEmbedding(query)
   const embeddingString = `[${queryEmbedding.join(',')}]`
 
-  const chunks = await prisma.$queryRaw<Array<{
-    id: string
-    content: string
-    knowledgeBaseId: string
-    source: string
-    score: number
-  }>>`
+  const chunks = await prisma.$queryRaw<RawChunkResult[]>`
     SELECT 
       c.id,
       c.content,
@@ -42,9 +45,9 @@ export async function searchKnowledgeBase({
     WHERE kb."tenantId" = ${tenantId}
     ORDER BY c.embedding <=> ${embeddingString}::vector
     LIMIT ${limit}
-  ` as any
+  `
 
-  return chunks.map((chunk: any) => ({
+  return chunks.map((chunk): KnowledgeBaseChunk => ({
     id: chunk.id,
     content: chunk.content,
     source: chunk.source,

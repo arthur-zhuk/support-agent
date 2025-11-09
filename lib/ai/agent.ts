@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { getShopifyTools } from './tools/shopify'
 import { getIntercomTools } from './tools/intercom'
 import { searchKnowledgeBase } from '../rag/search'
+import type { ChatMessage, StreamTextStep, ToolCall } from '@/lib/types/ai'
+import type { KnowledgeBaseChunk } from '@/lib/types/rag'
 
 export async function createAgent({
   tenantId,
@@ -11,7 +13,7 @@ export async function createAgent({
   onToolCall,
 }: {
   tenantId: string
-  messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>
+  messages: ChatMessage[]
   onToolCall?: (toolName: string, args: unknown) => void
 }) {
   const shopifyTools = getShopifyTools(tenantId)
@@ -25,7 +27,7 @@ export async function createAgent({
     execute: async ({ query }: { query: string }) => {
       const results = await searchKnowledgeBase({ tenantId, query })
       return {
-        results: results.map((r: any) => ({
+        results: results.map((r) => ({
           content: r.content,
           source: r.source,
           score: r.score,
@@ -53,9 +55,9 @@ Be friendly, concise, and helpful. When you don't know something, search the kno
     system: systemPrompt,
     messages,
     tools: allTools,
-    onStepFinish: (step: any) => {
+    onStepFinish: (step: StreamTextStep) => {
       if (step.toolCalls && step.toolCalls.length > 0) {
-        step.toolCalls.forEach((toolCall: any) => {
+        step.toolCalls.forEach((toolCall: ToolCall) => {
           onToolCall?.(toolCall.toolName, toolCall.args || toolCall.parameters)
         })
       }

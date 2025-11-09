@@ -2,6 +2,8 @@ import { createAgent } from '@/lib/ai/agent'
 import { prisma } from '@/lib/db/prisma'
 import { trackConversationWithCost, trackToolRun } from '@/lib/metrics/tracker'
 import { NextRequest } from 'next/server'
+import type { ConversationMessage } from '@/lib/types/prisma'
+import { Prisma } from '@prisma/client'
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,9 +22,11 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    const allMessages = existingConversation
-      ? [...(existingConversation.messages as Array<{ role: string; content: string }>), ...messages]
-      : messages
+    const existingMessages = (existingConversation?.messages as ConversationMessage[]) || []
+    const allMessages: ConversationMessage[] = [
+      ...existingMessages,
+      ...(messages as ConversationMessage[]),
+    ]
 
     const citations: string[] = []
     const toolCalls: Array<{ toolName: string; args: unknown }> = []
@@ -54,11 +58,11 @@ export async function POST(req: NextRequest) {
         create: {
           tenantId,
           sessionId,
-          messages: updatedMessages as any[],
+          messages: updatedMessages as Prisma.InputJsonValue[],
           citations,
         },
         update: {
-          messages: updatedMessages as any[],
+          messages: updatedMessages as Prisma.InputJsonValue[],
           citations,
         },
       })
@@ -69,7 +73,7 @@ export async function POST(req: NextRequest) {
             tenantId,
             conversationId: sessionId,
             toolName: toolCall.toolName,
-            args: toolCall.args as any,
+            args: toolCall.args as Prisma.InputJsonValue,
             success: true,
           },
         })
