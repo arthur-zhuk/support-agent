@@ -31,7 +31,7 @@ const PLANS = [
       'Shopify integration',
       'Email support',
     ],
-    priceId: process.env.STRIPE_STARTER_PRICE_ID || 'price_starter',
+    priceId: process.env.STRIPE_STARTER_PRICE_ID || 'price_1SRdhDISn03FmR1gcU7S41DB',
   },
   {
     id: 'pro',
@@ -46,7 +46,7 @@ const PLANS = [
       'Priority support',
       'Advanced analytics',
     ],
-    priceId: process.env.STRIPE_PRO_PRICE_ID || 'price_pro',
+    priceId: process.env.STRIPE_PRO_PRICE_ID || 'price_1SRdhDISn03FmR1gZyFF8ugy',
     popular: true,
   },
   {
