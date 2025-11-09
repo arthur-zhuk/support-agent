@@ -2,12 +2,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CreditCard, CheckCircle2, XCircle, Clock } from 'lucide-react'
-import { prisma } from '@/lib/db/prisma'
 import Link from 'next/link'
 import { BillingClient } from './billing-client'
+import type { Subscription } from '@prisma/client'
 
-async function getSubscription(tenantId: string) {
+async function getSubscription(tenantId: string): Promise<Subscription | null> {
   try {
+    const { prisma } = await import('@/lib/db/prisma')
     const subscription = await prisma.subscription.findUnique({
       where: { tenantId },
     })

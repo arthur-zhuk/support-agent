@@ -10,13 +10,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing tenantId or priceId' }, { status: 400 })
     }
 
-    const tenant = await prisma.tenant.findUnique({
+    let tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       include: { subscription: true, users: true },
     })
 
     if (!tenant) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
+      tenant = await prisma.tenant.create({
+        data: {
+          id: tenantId,
+          name: 'Demo Tenant',
+          slug: tenantId,
+          users: {
+            create: {
+              email: 'demo@example.com',
+              name: 'Demo User',
+            },
+          },
+        },
+        include: { subscription: true, users: true },
+      })
     }
 
     let customerId: string
@@ -65,8 +78,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: session.url })
   } catch (error) {
     console.error('Checkout error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
     return NextResponse.json(
-      { error: (error as Error).message },
+      { 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? errorStack : undefined,
+      },
       { status: 500 }
     )
   }
