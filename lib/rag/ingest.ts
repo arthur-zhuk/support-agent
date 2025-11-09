@@ -87,7 +87,7 @@ export async function ingestUrl({
   for (const chunk of chunks) {
     const embedding = await generateEmbedding(chunk)
 
-    await prisma.chunk.create({
+    await (prisma as any).chunk.create({
       data: {
         knowledgeBaseId: knowledgeBase.id,
         content: chunk,
@@ -187,7 +187,7 @@ export async function ingestFile({
   for (const chunk of chunks) {
     const embedding = await generateEmbedding(chunk)
 
-    await prisma.chunk.create({
+    await (prisma as any).chunk.create({
       data: {
         knowledgeBaseId: knowledgeBase.id,
         content: chunk,

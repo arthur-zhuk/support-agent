@@ -14,9 +14,16 @@ async function getShopifyClient(tenantId: string) {
     throw new Error('Shopify connection not found')
   }
 
+  const metadata = (connection.metadata ?? {}) as Record<string, unknown>
+  const shop = typeof metadata.shop === 'string' ? metadata.shop : undefined
+
+  if (!shop) {
+    throw new Error('Shopify connection is missing shop domain metadata')
+  }
+
   return {
     accessToken: connection.token,
-    shop: connection.metadata?.shop as string,
+    shop,
   }
 }
 

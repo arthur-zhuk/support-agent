@@ -44,7 +44,7 @@ export async function searchKnowledgeBase({
     LIMIT ${limit}
   ` as any
 
-  return chunks.map(chunk => ({
+  return chunks.map((chunk: any) => ({
     id: chunk.id,
     content: chunk.content,
     source: chunk.source,

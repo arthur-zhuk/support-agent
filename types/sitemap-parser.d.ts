@@ -1,0 +1,2 @@
+declare module 'sitemap-parser';
+
