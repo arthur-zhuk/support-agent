@@ -36,7 +36,7 @@ export function getIntercomTools(tenantId: string) {
         priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
         assigneeId: z.string().optional(),
       }),
-      execute: async ({ subject, body, priority, assigneeId }) => {
+      execute: async ({ subject, body, priority, assigneeId }: any) => {
         const client = await getIntercomClient(tenantId)
 
         const response = await fetch('https://api.intercom.io/conversations', {
@@ -69,7 +69,7 @@ export function getIntercomTools(tenantId: string) {
           ticketNumber: data.ticket_attributes?._default_title_,
         }
       },
-    }),
+    } as any),
 
     escalateToHuman: tool({
       description: 'Escalate the conversation to a human agent in Intercom with full context',
@@ -79,7 +79,7 @@ export function getIntercomTools(tenantId: string) {
         transcript: z.string().describe('Full conversation transcript'),
         customerEmail: z.string().email().optional(),
       }),
-      execute: async ({ conversationId, message, transcript, customerEmail }) => {
+      execute: async ({ conversationId, message, transcript, customerEmail }: any) => {
         const client = await getIntercomClient(tenantId)
 
         const escalationBody = `Escalation Request: ${message}\n\nConversation Transcript:\n${transcript}`
@@ -114,7 +114,7 @@ export function getIntercomTools(tenantId: string) {
           message: 'Conversation escalated to human agent. They will respond shortly.',
         }
       },
-    }),
+    } as any),
   }
 }
 

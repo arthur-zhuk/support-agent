@@ -28,7 +28,7 @@ export function getShopifyTools(tenantId: string) {
         orderNumber: z.string().optional().describe('Order number (e.g., #1001)'),
         email: z.string().email().optional().describe('Customer email address'),
       }),
-      execute: async ({ orderNumber, email }) => {
+      execute: async ({ orderNumber, email }: any) => {
         const client = await getShopifyClient(tenantId)
 
         if (orderNumber) {
@@ -102,7 +102,7 @@ export function getShopifyTools(tenantId: string) {
           reason: z.string().optional(),
         })),
       }),
-      execute: async ({ orderNumber, items }) => {
+      execute: async ({ orderNumber, items }: any) => {
         const client = await getShopifyClient(tenantId)
         const orderId = orderNumber.replace('#', '')
 
@@ -147,7 +147,7 @@ export function getShopifyTools(tenantId: string) {
         orderNumber: z.string().describe('Order number'),
         reason: z.string().optional().describe('Reason for cancellation'),
       }),
-      execute: async ({ orderNumber, reason }) => {
+      execute: async ({ orderNumber, reason }: any) => {
         const client = await getShopifyClient(tenantId)
         const orderId = orderNumber.replace('#', '')
 
@@ -187,7 +187,7 @@ export function getShopifyTools(tenantId: string) {
         orderNumber: z.string().describe('Order number'),
         carrier: z.string().optional().describe('Shipping carrier'),
       }),
-      execute: async ({ orderNumber }) => {
+      execute: async ({ orderNumber }: any) => {
         return {
           success: true,
           labelUrl: `https://example.com/labels/${orderNumber}`,
