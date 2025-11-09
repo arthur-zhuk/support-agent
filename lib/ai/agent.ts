@@ -22,7 +22,7 @@ export async function createAgent({
     parameters: z.object({
       query: z.string().describe('The search query'),
     }),
-    execute: async ({ query }) => {
+    execute: async ({ query }: { query: string }) => {
       const results = await searchKnowledgeBase({ tenantId, query })
       return {
         results: results.map((r: any) => ({
@@ -44,14 +44,13 @@ export async function createAgent({
     model: openai('gpt-4o'),
     messages,
     tools: allTools,
-    maxSteps: 5,
-    onStepFinish: (step) => {
+    onStepFinish: (step: any) => {
       if (step.toolCalls && step.toolCalls.length > 0) {
-        step.toolCalls.forEach((toolCall) => {
-          onToolCall?.(toolCall.toolName, toolCall.args)
+        step.toolCalls.forEach((toolCall: any) => {
+          onToolCall?.(toolCall.toolName, toolCall.args || toolCall.parameters)
         })
       }
     },
-  })
+  } as any)
 }
 
