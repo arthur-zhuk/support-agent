@@ -1,80 +1,40 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { BookOpen, Copy, CheckCircle2, AlertCircle, Globe, FileText, RefreshCw } from 'lucide-react'
-
-type KnowledgeBase = {
-  id: string
-  source: string
-  sourceType: string
-  chunksCount: number
-  lastCrawled: string | null
-  createdAt: string
-}
+import { useKnowledgeBases, useIngestKnowledge } from '@/lib/hooks/use-knowledge-bases'
+import { toast } from 'sonner'
 
 export default function KnowledgePage() {
+  const tenantId = 'demo-tenant'
   const [url, setUrl] = useState('')
   const [sitemapUrl, setSitemapUrl] = useState('')
   const [ingestType, setIngestType] = useState<'url' | 'sitemap'>('url')
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
   const [copied, setCopied] = useState(false)
-  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([])
 
-  const loadKnowledgeBases = async () => {
-    try {
-      const tenantId = 'demo-tenant'
-      const response = await fetch(`/api/knowledge/list?tenantId=${tenantId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setKnowledgeBases(data.knowledgeBases || [])
-      }
-    } catch (error) {
-      console.error('Failed to load knowledge bases:', error)
-    }
-  }
-
-  useEffect(() => {
-    loadKnowledgeBases()
-  }, [])
+  const { data: knowledgeBases = [], isLoading, refetch } = useKnowledgeBases(tenantId)
+  const ingestMutation = useIngestKnowledge()
 
   const handleIngest = async () => {
     if (ingestType === 'url' && !url) return
     if (ingestType === 'sitemap' && !sitemapUrl) return
 
-    setLoading(true)
-    setMessage('')
-
     try {
-      const tenantId = 'demo-tenant'
-      const response = await fetch('/api/knowledge/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId,
-          type: ingestType,
-          url: ingestType === 'url' ? url : undefined,
-          sitemapUrl: ingestType === 'sitemap' ? sitemapUrl : undefined,
-        }),
+      await ingestMutation.mutateAsync({
+        tenantId,
+        type: ingestType,
+        url: ingestType === 'url' ? url : undefined,
+        sitemapUrl: ingestType === 'sitemap' ? sitemapUrl : undefined,
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to ingest')
-      }
-
-      setMessage('Successfully ingested!')
+      toast.success('Successfully ingested!')
       setUrl('')
       setSitemapUrl('')
-      await loadKnowledgeBases()
     } catch (error) {
-      setMessage('Error: ' + (error as Error).message)
-    } finally {
-      setLoading(false)
+      toast.error('Error: ' + (error as Error).message)
     }
   }
 
@@ -84,6 +44,7 @@ export default function KnowledgePage() {
     navigator.clipboard.writeText(embedCode)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+    toast.success('Copied to clipboard!')
   }
 
   return (
@@ -143,21 +104,18 @@ export default function KnowledgePage() {
                   placeholder={ingestType === 'url' ? 'https://example.com/docs' : 'https://example.com/sitemap.xml'}
                   onKeyDown={(e) => e.key === 'Enter' && handleIngest()}
                 />
-                <Button onClick={handleIngest} disabled={loading || (ingestType === 'url' ? !url : !sitemapUrl)}>
-                  {loading ? 'Ingesting...' : 'Add'}
+                <Button
+                  onClick={handleIngest}
+                  disabled={ingestMutation.isPending || (ingestType === 'url' ? !url : !sitemapUrl)}
+                >
+                  {ingestMutation.isPending ? 'Ingesting...' : 'Add'}
                 </Button>
               </div>
             </div>
-            {message && (
-              <div className={`flex items-center gap-2 text-sm ${
-                message.includes('Error') ? 'text-destructive' : 'text-green-600'
-              }`}>
-                {message.includes('Error') ? (
-                  <AlertCircle className="h-4 w-4" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" />
-                )}
-                <span>{message}</span>
+            {ingestMutation.isError && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span>{ingestMutation.error?.message || 'Failed to ingest'}</span>
               </div>
             )}
           </CardContent>
@@ -207,14 +165,16 @@ export default function KnowledgePage() {
                 Your ingested content sources
               </CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={loadKnowledgeBases}>
-              <RefreshCw className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {knowledgeBases.length === 0 ? (
+          {isLoading ? (
+            <p className="text-muted-foreground text-center py-8">Loading...</p>
+          ) : knowledgeBases.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No knowledge bases yet</p>
           ) : (
             <div className="space-y-4">
