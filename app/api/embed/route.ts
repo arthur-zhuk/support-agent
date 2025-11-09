@@ -72,18 +72,70 @@ export async function GET(req: NextRequest) {
   const chat = document.getElementById('support-agent-chat');
   const messages = document.getElementById('support-agent-messages');
   const input = document.getElementById('support-agent-input');
-  let sessionId = 'session-' + Date.now();
+  
+  let sessionId = localStorage.getItem('support-agent-session') || 'session-' + Date.now();
+  localStorage.setItem('support-agent-session', sessionId);
+  
+  let conversationHistory = [];
+
+  async function loadHistory() {
+    try {
+      const response = await fetch(config.apiUrl + '/chat/history?tenantId=' + config.tenantId + '&sessionId=' + sessionId);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.messages && data.messages.length > 0) {
+          conversationHistory = data.messages;
+          renderMessages(data.messages);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load history:', e);
+    }
+  }
+
+  function renderMessages(msgs) {
+    messages.innerHTML = '';
+    msgs.forEach(msg => {
+      if (msg.role === 'user') {
+        const userMsg = document.createElement('div');
+        userMsg.style.cssText = 'margin-bottom: 12px; text-align: right;';
+        userMsg.innerHTML = \`<div style="display: inline-block; background: #0070f3; color: white; padding: 8px 12px; border-radius: 12px; max-width: 80%;">\${escapeHtml(msg.content)}</div>\`;
+        messages.appendChild(userMsg);
+      } else if (msg.role === 'assistant') {
+        const assistantMsg = document.createElement('div');
+        assistantMsg.style.cssText = 'margin-bottom: 12px;';
+        assistantMsg.innerHTML = \`<div style="display: inline-block; background: #f5f5f5; padding: 8px 12px; border-radius: 12px; max-width: 80%;">\${escapeHtml(msg.content)}</div>\`;
+        messages.appendChild(assistantMsg);
+      }
+    });
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
   toggle.addEventListener('click', () => {
-    chat.style.display = chat.style.display === 'none' ? 'flex' : 'none';
+    const isOpen = chat.style.display !== 'none';
+    chat.style.display = isOpen ? 'none' : 'flex';
+    if (!isOpen && conversationHistory.length === 0) {
+      loadHistory();
+    }
   });
 
   async function sendMessage(text) {
+    if (!text.trim()) return;
+    
+    input.disabled = true;
     const userMsg = document.createElement('div');
     userMsg.style.cssText = 'margin-bottom: 12px; text-align: right;';
-    userMsg.innerHTML = \`<div style="display: inline-block; background: #0070f3; color: white; padding: 8px 12px; border-radius: 12px;">\${text}</div>\`;
+    userMsg.innerHTML = \`<div style="display: inline-block; background: #0070f3; color: white; padding: 8px 12px; border-radius: 12px; max-width: 80%;">\${escapeHtml(text)}</div>\`;
     messages.appendChild(userMsg);
     messages.scrollTop = messages.scrollHeight;
+
+    conversationHistory.push({ role: 'user', content: text });
 
     const response = await fetch(config.apiUrl + '/chat', {
       method: 'POST',
@@ -115,22 +167,33 @@ export async function GET(req: NextRequest) {
 
       for (const line of lines) {
         if (line.startsWith('0:')) {
-          const data = JSON.parse(line.slice(2));
-          if (data.type === 'text-delta') {
-            contentDiv.textContent += data.textDelta;
-            messages.scrollTop = messages.scrollHeight;
+          try {
+            const data = JSON.parse(line.slice(2));
+            if (data.type === 'text-delta') {
+              contentDiv.textContent += data.textDelta;
+              messages.scrollTop = messages.scrollHeight;
+            }
+          } catch (e) {
+            console.error('Failed to parse stream data:', e);
           }
         }
       }
     }
+    
+    const finalText = contentDiv.textContent;
+    conversationHistory.push({ role: 'assistant', content: finalText });
+    input.disabled = false;
+    input.focus();
   }
 
   input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && input.value.trim()) {
+    if (e.key === 'Enter' && input.value.trim() && !input.disabled) {
       sendMessage(input.value);
       input.value = '';
     }
   });
+  
+  loadHistory();
 })();
 `
 
