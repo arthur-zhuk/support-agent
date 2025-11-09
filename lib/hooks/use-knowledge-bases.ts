@@ -20,7 +20,7 @@ async function fetchKnowledgeBases(tenantId: string): Promise<KnowledgeBase[]> {
 
 export function useKnowledgeBases(tenantId: string) {
   return useQuery({
-    queryKey: ['knowledge-bases', tenantId],
+    queryKey: ['knowledgeBases', tenantId],
     queryFn: () => fetchKnowledgeBases(tenantId),
   })
 }

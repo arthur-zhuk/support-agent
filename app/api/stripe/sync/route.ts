@@ -49,8 +49,9 @@ export async function POST(req: NextRequest) {
       stripeSubscription = subscriptions.data[0]
     }
 
-    const currentPeriodEnd = 'current_period_end' in stripeSubscription && typeof stripeSubscription.current_period_end === 'number'
-      ? new Date(stripeSubscription.current_period_end * 1000)
+    const subscriptionObj = stripeSubscription as any
+    const currentPeriodEnd = subscriptionObj.current_period_end
+      ? new Date(subscriptionObj.current_period_end * 1000)
       : null
 
     const subscriptionData = {

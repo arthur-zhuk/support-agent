@@ -3,6 +3,8 @@ import * as cheerio from 'cheerio'
 import SitemapParser from 'sitemap-parser'
 import type { SitemapData, SitemapUrl } from '@/lib/types/rag'
 import { Prisma } from '@prisma/client'
+import { randomBytes } from 'crypto'
+import { Client } from 'pg'
 
 async function fetchAndParseUrl(url: string): Promise<{ content: string; title: string }> {
   const response = await fetch(url)
@@ -20,11 +22,21 @@ async function fetchAndParseUrl(url: string): Promise<{ content: string; title: 
 async function chunkText(text: string, chunkSize = 1000, overlap = 200): Promise<string[]> {
   const chunks: string[] = []
   let start = 0
+  const maxChunks = 10000
 
-  while (start < text.length) {
+  while (start < text.length && chunks.length < maxChunks) {
     const end = Math.min(start + chunkSize, text.length)
-    chunks.push(text.slice(start, end))
-    start = end - overlap
+    const chunk = text.slice(start, end)
+    if (chunk.length > 0) {
+      chunks.push(chunk)
+    }
+    const nextStart = end - overlap
+    if (nextStart <= start) {
+      start = end
+    } else {
+      start = nextStart
+    }
+    if (start >= text.length) break
   }
 
   return chunks
@@ -39,7 +51,12 @@ async function generateEmbedding(text: string): Promise<number[]> {
     input: text,
   })
 
-  return response.data[0].embedding
+  const embedding = response.data[0]?.embedding
+  if (!embedding || embedding.length !== 1536) {
+    throw new Error(`Invalid embedding: expected length 1536, got ${embedding?.length || 0}`)
+  }
+  
+  return embedding
 }
 
 export async function ingestUrl({
@@ -87,12 +104,34 @@ export async function ingestUrl({
   })
 
   for (const chunk of chunks) {
+    if (!chunk.trim()) continue
+    
     const embedding = await generateEmbedding(chunk)
+    
+    if (!embedding || embedding.length !== 1536) {
+      console.error(`Invalid embedding length: ${embedding?.length}, expected 1536`)
+      continue
+    }
 
-    await prisma.$executeRaw`
-      INSERT INTO "Chunk" ("knowledgeBaseId", content, embedding, metadata, "createdAt")
-      VALUES (${knowledgeBase.id}, ${chunk}, ${`[${embedding.join(',')}]`}::vector, ${JSON.stringify({ source: url, title })}::jsonb, NOW())
-    `
+    const embeddingString = `[${embedding.join(',')}]`
+    const chunkId = randomBytes(16).toString('hex')
+    
+    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL
+    if (dbUrl) {
+      const pgClient = new Client({ connectionString: dbUrl })
+      await pgClient.connect()
+      try {
+        await pgClient.query(
+          `INSERT INTO "Chunk" (id, "knowledgeBaseId", content, embedding, metadata, "createdAt")
+           VALUES ($1, $2, $3, $4::vector, $5::jsonb, NOW())`,
+          [chunkId, knowledgeBase.id, chunk, embeddingString, JSON.stringify({ source: url, title })]
+        )
+      } finally {
+        await pgClient.end()
+      }
+    } else {
+      throw new Error('DATABASE_URL not configured')
+    }
   }
 
   return { knowledgeBaseId: knowledgeBase.id, chunksCount: chunks.length }
@@ -183,12 +222,34 @@ export async function ingestFile({
   })
 
   for (const chunk of chunks) {
+    if (!chunk.trim()) continue
+    
     const embedding = await generateEmbedding(chunk)
+    
+    if (!embedding || embedding.length !== 1536) {
+      console.error(`Invalid embedding length: ${embedding?.length}, expected 1536`)
+      continue
+    }
 
-    await prisma.$executeRaw`
-      INSERT INTO "Chunk" ("knowledgeBaseId", content, embedding, metadata, "createdAt")
-      VALUES (${knowledgeBase.id}, ${chunk}, ${`[${embedding.join(',')}]`}::vector, ${JSON.stringify({ source: fileName })}::jsonb, NOW())
-    `
+    const embeddingString = `[${embedding.join(',')}]`
+    const chunkId = randomBytes(16).toString('hex')
+    
+    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL
+    if (dbUrl) {
+      const pgClient = new Client({ connectionString: dbUrl })
+      await pgClient.connect()
+      try {
+        await pgClient.query(
+          `INSERT INTO "Chunk" (id, "knowledgeBaseId", content, embedding, metadata, "createdAt")
+           VALUES ($1, $2, $3, $4::vector, $5::jsonb, NOW())`,
+          [chunkId, knowledgeBase.id, chunk, embeddingString, JSON.stringify({ source: fileName })]
+        )
+      } finally {
+        await pgClient.end()
+      }
+    } else {
+      throw new Error('DATABASE_URL not configured')
+    }
   }
 
   return { knowledgeBaseId: knowledgeBase.id, chunksCount: chunks.length }
