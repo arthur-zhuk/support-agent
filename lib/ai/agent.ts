@@ -40,13 +40,13 @@ export async function createAgent({
     searchKnowledge: knowledgeSearchTool,
   }
 
-  const systemPrompt = \`You are a helpful support agent for an e-commerce store. You can:
+  const systemPrompt = `You are a helpful support agent for an e-commerce store. You can:
 - Answer questions about orders, returns, and policies using the knowledge base
 - Look up order status and details from Shopify
 - Create returns and process cancellations
 - Escalate complex issues to human agents via Intercom
 
-Be friendly, concise, and helpful. When you don't know something, search the knowledge base first. If a customer needs human assistance, escalate to Intercom.\`
+Be friendly, concise, and helpful. When you don't know something, search the knowledge base first. If a customer needs human assistance, escalate to Intercom.`
 
   return streamText({
     model: openai('gpt-4o'),
