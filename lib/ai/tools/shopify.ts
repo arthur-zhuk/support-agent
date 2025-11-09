@@ -90,7 +90,7 @@ export function getShopifyTools(tenantId: string) {
 
         return { error: 'Either orderNumber or email must be provided' }
       },
-    }),
+    } as any),
 
     createReturn: tool({
       description: 'Create a return/refund request for an order',
@@ -139,7 +139,7 @@ export function getShopifyTools(tenantId: string) {
           amount: data.refund.amount,
         }
       },
-    }),
+    } as any),
 
     cancelOrder: tool({
       description: 'Cancel an order that has not been fulfilled',
@@ -179,7 +179,7 @@ export function getShopifyTools(tenantId: string) {
           cancelled: data.order.cancelled_at !== null,
         }
       },
-    }),
+    } as any),
 
     generateReturnLabel: tool({
       description: 'Generate a return shipping label for an order',
@@ -194,7 +194,7 @@ export function getShopifyTools(tenantId: string) {
           message: 'Return label generated. Customer will receive it via email.',
         }
       },
-    }),
+    } as any),
   }
 }
 
