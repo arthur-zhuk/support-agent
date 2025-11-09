@@ -29,7 +29,10 @@ export function BillingClient({
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        throw new Error(errorData.error || 'Failed to create checkout session')
+        const errorMessage = errorData.error || 'Failed to create checkout session'
+        toast.error(errorMessage)
+        setLoading(false)
+        return
       }
 
       const { url } = await response.json()
@@ -37,7 +40,8 @@ export function BillingClient({
         window.location.href = url
       }
     } catch (error) {
-      toast.error('Failed to start checkout. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start checkout. Please try again.'
+      toast.error(errorMessage)
       setLoading(false)
     }
   }
