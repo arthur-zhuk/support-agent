@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { MessageSquare, BookOpen, BarChart3, Settings } from 'lucide-react'
+import { MessageSquare, BookOpen, BarChart3, Settings, CreditCard } from 'lucide-react'
 
 export default function DashboardLayout({
   children,
@@ -26,6 +26,9 @@ export default function DashboardLayout({
                 </Button>
                 <Button variant="ghost" asChild>
                   <Link href="/dashboard/analytics">Analytics</Link>
+                </Button>
+                <Button variant="ghost" asChild>
+                  <Link href="/dashboard/billing">Billing</Link>
                 </Button>
               </nav>
             </div>

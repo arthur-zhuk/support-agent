@@ -23,6 +23,7 @@ model Tenant {
   conversations Conversation[]
   toolRuns     ToolRun[]
   metrics      MetricsDaily[]
+  subscription Subscription?
 }
 
 model User {
@@ -144,4 +145,23 @@ model MetricsDaily {
 
   @@unique([tenantId, date])
   @@index([tenantId, date])
+}
+
+model Subscription {
+  id                String   @id @default(cuid())
+  tenantId          String   @unique
+  stripeCustomerId String   @unique
+  stripeSubscriptionId String? @unique
+  stripePriceId    String?
+  status            String
+  plan              String?
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([stripeCustomerId])
 }
