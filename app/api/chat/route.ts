@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    const stream = result.toDataStreamResponse()
+    const stream = result.toTextStreamResponse()
 
     result.textStream.then(async () => {
       const updatedMessages = [...messages, { role: 'assistant', content: await result.text }]

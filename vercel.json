@@ -3,7 +3,7 @@
   "framework": "nextjs",
   "installCommand": "npm install",
   "env": {
-    "DATABASE_URL": "@postgres_url_prisma"
+    "DATABASE_URL": "@postgres_prisma_url"
   }
 }
 
