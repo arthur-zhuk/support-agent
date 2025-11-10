@@ -23,14 +23,17 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) {
+    
+    const trimmedEmail = email.trim()
+    
+    if (!trimmedEmail) {
       toast.error('Please enter your email address')
       return
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(trimmedEmail)) {
       toast.error('Please enter a valid email address')
       return
     }
@@ -40,7 +43,7 @@ function LoginForm() {
     
     try {
       const result = await signIn('email', {
-        email: email.toLowerCase().trim(),
+        email: trimmedEmail.toLowerCase(),
         redirect: false,
         callbackUrl,
       })
@@ -60,13 +63,18 @@ function LoginForm() {
           toast.error(`Failed to send email: ${result.error}. Please try again.`)
         }
         setLoading(false)
-      } else {
+      } else if (result?.ok) {
         setEmailSent(true)
         toast.success('Magic link sent! Check your email.')
         // Redirect to verify email page after a short delay
         setTimeout(() => {
           router.push('/verify-email')
         }, 1500)
+      } else {
+        // Unexpected result
+        console.error('Unexpected signIn result:', result)
+        toast.error('An unexpected error occurred. Please try again.')
+        setLoading(false)
       }
     } catch (error: any) {
       console.error('Sign in error:', error)
