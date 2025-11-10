@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,17 @@ function LoginForm() {
   const router = useRouter()
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard/connections'
   const error = searchParams.get('error')
+  
+  useEffect(() => {
+    if (error) {
+      const errorMessages: Record<string, string> = {
+        InvalidToken: 'Invalid or expired magic link. Please request a new one.',
+        TokenExpired: 'This magic link has expired. Please request a new one.',
+        VerificationFailed: 'Verification failed. Please try again.',
+      }
+      toast.error(errorMessages[error] || `Error: ${error}`)
+    }
+  }, [error])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
