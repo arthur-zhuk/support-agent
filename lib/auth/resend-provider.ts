@@ -5,6 +5,13 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
   // Trim whitespace/newlines from email (common issue with env vars)
   const from = (options.from || process.env.RESEND_FROM || 'noreply@support-agent.com').trim()
 
+  // Log provider initialization
+  console.log('[ResendEmailProvider] Initializing provider:', {
+    from,
+    hasApiKey: !!process.env.RESEND_API_KEY,
+    nodeEnv: process.env.NODE_ENV,
+  })
+
   // Don't initialize Resend here - do it lazily in sendVerificationRequest
   // This prevents errors during module initialization when env vars might not be available
 
@@ -12,6 +19,8 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
     id: 'email',
     type: 'email',
     name: 'Email',
+    // NextAuth v5 may validate the server config, so we provide a valid-looking config
+    // but the actual sending happens in sendVerificationRequest using Resend API
     server: {
       host: 'resend.com',
       port: 587,
