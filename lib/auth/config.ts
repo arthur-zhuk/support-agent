@@ -67,11 +67,22 @@ const getEmailProvider = () => {
   if (apiKey) {
     console.log('[Auth Config] Using built-in Resend provider')
     // The built-in Resend provider expects apiKey and from in the config
-    // It will make these available as provider.apiKey and provider.from
-    return ResendProvider({
-      apiKey: apiKey, // Explicitly pass apiKey
+    // Note: The provider accesses provider.apiKey, so we need to ensure it's set
+    const resendConfig = ResendProvider({
+      apiKey: apiKey, // Pass apiKey in config
       from: resendFrom, // Override the default from address
     })
+    
+    // Ensure apiKey is available on the provider object itself
+    // (The built-in provider accesses provider.apiKey in sendVerificationRequest)
+    if (!resendConfig.apiKey) {
+      resendConfig.apiKey = apiKey
+    }
+    if (resendConfig.from !== resendFrom) {
+      resendConfig.from = resendFrom
+    }
+    
+    return resendConfig
   }
   
   // Fallback to standard EmailProvider if Resend is not configured
