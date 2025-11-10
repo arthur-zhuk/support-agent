@@ -11,7 +11,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  const token = await getToken({ 
+    req: request, 
+    secret: process.env.NEXTAUTH_SECRET,
+    salt: 'authjs.session-token',
+  })
+
+  console.log('[Middleware] Token check:', {
+    path: request.nextUrl.pathname,
+    hasToken: !!token,
+    cookies: request.cookies.getAll().map(c => c.name),
+  })
 
   if (request.nextUrl.pathname.startsWith('/dashboard')) {
     if (!token) {
