@@ -22,6 +22,20 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
     from,
     async sendVerificationRequest({ identifier: email, url, provider }) {
       const senderEmail = provider.from as string
+      
+      // Log ALL environment variables that start with RESEND or SMTP for debugging
+      const relevantEnvVars = Object.keys(process.env)
+        .filter(key => key.includes('RESEND') || key.includes('SMTP'))
+        .reduce((acc, key) => {
+          const value = process.env[key]
+          if (value) {
+            acc[key] = key.includes('KEY') || key.includes('PASSWORD') 
+              ? `${value.substring(0, 10)}...` 
+              : value
+          }
+          return acc
+        }, {} as Record<string, string>)
+      
       const apiKey = process.env.RESEND_API_KEY
       
       console.log('[ResendEmailProvider] sendVerificationRequest called:', {
@@ -30,11 +44,17 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
         hasApiKey: !!apiKey,
         apiKeyLength: apiKey?.length || 0,
         nodeEnv: process.env.NODE_ENV,
+        relevantEnvVars,
       })
       
       if (!apiKey) {
         const errorMsg = 'Email service is not configured. RESEND_API_KEY is missing. Please set RESEND_API_KEY and RESEND_FROM environment variables in your Vercel project settings.'
-        console.error('[ResendEmailProvider]', errorMsg)
+        console.error('[ResendEmailProvider] Configuration error:', {
+          errorMsg,
+          hasApiKey: !!apiKey,
+          relevantEnvVars,
+          allEnvKeys: Object.keys(process.env).filter(k => k.includes('RESEND') || k.includes('SMTP')),
+        })
         // Throw Configuration error so NextAuth recognizes it properly
         const error: any = new Error(errorMsg)
         error.type = 'Configuration'
