@@ -4,7 +4,7 @@
 
 1. **Create `.env.local` file** in the project root:
 ```bash
-RESEND_API_KEY=re_FCJqv1Sv_EDVs5PKQZkCZSrgxwAMyeMXR
+RESEND_API_KEY=your_resend_api_key_here
 RESEND_FROM=contact@velocityspanlabs.com
 NEXTAUTH_URL=http://localhost:3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
