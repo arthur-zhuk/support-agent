@@ -2,7 +2,8 @@ import { Resend } from 'resend'
 import type { EmailConfig, EmailUserConfig } from 'next-auth/providers/email'
 
 export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
-  const from = options.from || process.env.RESEND_FROM || 'noreply@support-agent.com'
+  // Trim whitespace/newlines from email (common issue with env vars)
+  const from = (options.from || process.env.RESEND_FROM || 'noreply@support-agent.com').trim()
 
   // Don't initialize Resend here - do it lazily in sendVerificationRequest
   // This prevents errors during module initialization when env vars might not be available
@@ -21,7 +22,8 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
     },
     from,
     async sendVerificationRequest({ identifier: email, url, provider }) {
-      const senderEmail = provider.from as string
+      // Trim whitespace from sender email (in case it came from env var with newline)
+      const senderEmail = (provider.from as string).trim()
       
       // Log ALL environment variables that start with RESEND or SMTP for debugging
       const relevantEnvVars = Object.keys(process.env)
@@ -31,12 +33,13 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
           if (value) {
             acc[key] = key.includes('KEY') || key.includes('PASSWORD') 
               ? `${value.substring(0, 10)}...` 
-              : value
+              : value.trim() // Trim values for display
           }
           return acc
         }, {} as Record<string, string>)
       
-      const apiKey = process.env.RESEND_API_KEY
+      // Trim API key in case it has whitespace
+      const apiKey = process.env.RESEND_API_KEY?.trim()
       
       console.log('[ResendEmailProvider] sendVerificationRequest called:', {
         from: senderEmail,

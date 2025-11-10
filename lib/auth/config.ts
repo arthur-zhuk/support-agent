@@ -56,7 +56,8 @@ async function ensureTenantForUser(email: string, name?: string | null) {
 // This ensures the provider is always valid from NextAuth's perspective
 // The actual API key check happens inside sendVerificationRequest
 const getEmailProvider = () => {
-  const resendFrom = process.env.RESEND_FROM || 'noreply@support-agent.com'
+  // Trim whitespace/newlines from RESEND_FROM (common issue with env vars)
+  const resendFrom = (process.env.RESEND_FROM || 'noreply@support-agent.com').trim()
   return ResendEmailProvider({ from: resendFrom })
 }
 
