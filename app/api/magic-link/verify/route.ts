@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
-import { SignJWT } from 'jose'
+import { encode } from 'next-auth/jwt'
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get('token')
     const email = searchParams.get('email')
     const callbackUrl = searchParams.get('callbackUrl') || '/dashboard/connections'
+
+    console.log('[Magic Link Verify] Starting verification:', { token: token?.substring(0, 10), email })
 
     if (!token || !email) {
       return NextResponse.redirect(new URL('/login?error=InvalidToken', request.nextUrl.origin))
@@ -23,10 +25,12 @@ export async function GET(request: NextRequest) {
     })
 
     if (!verificationToken) {
+      console.log('[Magic Link Verify] Token not found')
       return NextResponse.redirect(new URL('/login?error=InvalidToken', request.nextUrl.origin))
     }
 
     if (verificationToken.expires < new Date()) {
+      console.log('[Magic Link Verify] Token expired')
       await prisma.verificationToken.delete({
         where: {
           identifier_token: {
@@ -53,6 +57,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!user) {
+      console.log('[Magic Link Verify] Creating new user')
       const slug = email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-')
       const tenant = await prisma.tenant.create({
         data: {
@@ -71,6 +76,7 @@ export async function GET(request: NextRequest) {
         include: { tenant: true },
       })
     } else if (!user.tenantId) {
+      console.log('[Magic Link Verify] Linking user to tenant')
       const slug = email.split('@')[0].toLowerCase().replace(/[^a-z0-9-]/g, '-')
       const tenant = await prisma.tenant.create({
         data: {
@@ -86,16 +92,16 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'development-secret')
-    const jwtToken = await new SignJWT({
-      sub: user.id,
-      email: user.email,
-      tenantId: user.tenantId,
+    const sessionToken = await encode({
+      token: {
+        sub: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.image,
+      },
+      secret: process.env.NEXTAUTH_SECRET!,
+      maxAge: 30 * 24 * 60 * 60,
     })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('30d')
-      .sign(secret)
 
     const response = NextResponse.redirect(new URL(callbackUrl, request.nextUrl.origin))
     
@@ -103,7 +109,7 @@ export async function GET(request: NextRequest) {
       ? '__Secure-next-auth.session-token'
       : 'next-auth.session-token'
     
-    response.cookies.set(cookieName, jwtToken, {
+    response.cookies.set(cookieName, sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -111,7 +117,7 @@ export async function GET(request: NextRequest) {
       path: '/',
     })
 
-    console.log('[Magic Link Verify] Session cookie set:', {
+    console.log('[Magic Link Verify] Session created successfully:', {
       cookieName,
       userId: user.id,
       email: user.email,
