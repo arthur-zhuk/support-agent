@@ -42,7 +42,7 @@ function LoginForm() {
     setEmailSent(false)
     
     try {
-      const response = await fetch('/api/auth/magic-link/send', {
+      const response = await fetch('/api/magic-link/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
