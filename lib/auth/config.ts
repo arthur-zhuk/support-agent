@@ -2,7 +2,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/db/prisma'
 import type { NextAuthConfig } from 'next-auth'
 import EmailProvider from 'next-auth/providers/email'
-import { ResendEmailProvider } from './resend-provider'
+import ResendProvider from 'next-auth/providers/resend'
 
 // Helper function to ensure tenant exists for a user
 async function ensureTenantForUser(email: string, name?: string | null) {
@@ -52,13 +52,32 @@ async function ensureTenantForUser(email: string, name?: string | null) {
   })
 }
 
-// Always use ResendEmailProvider - it checks for API key lazily at send time
-// This ensures the provider is always valid from NextAuth's perspective
-// The actual API key check happens inside sendVerificationRequest
+// Use NextAuth's built-in Resend provider
 const getEmailProvider = () => {
-  // Trim whitespace/newlines from RESEND_FROM (common issue with env vars)
+  const apiKey = process.env.RESEND_API_KEY?.trim()
   const resendFrom = (process.env.RESEND_FROM || 'noreply@support-agent.com').trim()
-  return ResendEmailProvider({ from: resendFrom })
+  
+  if (apiKey) {
+    console.log('[Auth Config] Using built-in Resend provider')
+    return ResendProvider({
+      apiKey,
+      from: resendFrom,
+    })
+  }
+  
+  // Fallback to standard EmailProvider if Resend is not configured
+  console.warn('[Auth Config] RESEND_API_KEY not found, using EmailProvider (will fail without SMTP)')
+  return EmailProvider({
+    server: {
+      host: 'localhost',
+      port: 587,
+      auth: {
+        user: 'noreply',
+        pass: 'password',
+      },
+    },
+    from: resendFrom,
+  })
 }
 
 export const authConfig = {
