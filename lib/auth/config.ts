@@ -55,12 +55,18 @@ export const authConfig = {
         })
 
         if (dbUser) {
-          session.user.id = dbUser.id
-          session.user.tenantId = dbUser.tenantId
-          session.user.tenant = {
-            id: dbUser.tenant.id,
-            name: dbUser.tenant.name,
-            slug: dbUser.tenant.slug,
+          return {
+            ...session,
+            user: {
+              ...session.user,
+              id: dbUser.id,
+              tenantId: dbUser.tenantId,
+              tenant: {
+                id: dbUser.tenant.id,
+                name: dbUser.tenant.name,
+                slug: dbUser.tenant.slug,
+              },
+            },
           }
         }
       }

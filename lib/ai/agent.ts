@@ -53,16 +53,15 @@ IMPORTANT:
       model: openai('gpt-4o'),
       system: systemPrompt,
       messages,
-      maxTokens: 2000,
       tools: {
         searchKnowledgeBase: knowledgeSearchTool,
       },
       stopWhen: stepCountIs(3), // Allow up to 3 tool calls (search, refine, answer)
       onStepFinish: (step) => {
         if (step.toolCalls && step.toolCalls.length > 0) {
-          step.toolCalls.forEach((toolCall) => {
+          step.toolCalls.forEach((toolCall: any) => {
             const toolName = typeof toolCall.toolName === 'string' ? toolCall.toolName : String(toolCall.toolName)
-            const args = (toolCall as { args?: unknown }).args || {}
+            const args = toolCall.args || {}
             onToolCall?.(toolName, args)
           })
         }
