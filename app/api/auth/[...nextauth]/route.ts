@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth'
 import { authConfig } from '@/lib/auth/config'
+import { NextRequest } from 'next/server'
 
 // Log config initialization
 console.log('[NextAuth Route] Initializing NextAuth with config:', {
@@ -14,32 +15,21 @@ const { handlers, auth, signIn, signOut } = nextAuth
 
 console.log('[NextAuth Route] NextAuth initialized successfully')
 
-async function handleRequest(request: Request) {
+export { auth, signIn, signOut, handlers }
+export async function GET(request: NextRequest) {
   const url = new URL(request.url)
-  console.log('[NextAuth Route] Handling request:', {
+  console.log('[NextAuth Route] GET request:', {
     pathname: url.pathname,
-    method: request.method,
     searchParams: Object.fromEntries(url.searchParams.entries()),
   })
-  
-  try {
-    if (request.method === 'GET') {
-      return handlers.GET(request)
-    } else if (request.method === 'POST') {
-      return handlers.POST(request)
-    }
-    return new Response('Method not allowed', { status: 405 })
-  } catch (error: any) {
-    console.error('[NextAuth Route] Error handling request:', error)
-    throw error
-  }
+  return handlers.GET(request)
 }
-
-export { auth, signIn, signOut, handlers }
-export async function GET(request: Request) {
-  return handleRequest(request)
-}
-export async function POST(request: Request) {
-  return handleRequest(request)
+export async function POST(request: NextRequest) {
+  const url = new URL(request.url)
+  console.log('[NextAuth Route] POST request:', {
+    pathname: url.pathname,
+    searchParams: Object.fromEntries(url.searchParams.entries()),
+  })
+  return handlers.POST(request)
 }
 
