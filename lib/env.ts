@@ -33,6 +33,10 @@ export const env = {
     url: getBaseUrl(),
   },
   
+  resend: {
+    apiKey: process.env.RESEND_API_KEY,
+    from: process.env.RESEND_FROM || 'noreply@support-agent.com',
+  },
   smtp: {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT) || 587,

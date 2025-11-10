@@ -2,6 +2,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/db/prisma'
 import type { NextAuthConfig } from 'next-auth'
 import EmailProvider from 'next-auth/providers/email'
+import { ResendEmailProvider } from './resend-provider'
 
 // Helper function to ensure tenant exists for a user
 async function ensureTenantForUser(email: string, name?: string | null) {
@@ -51,52 +52,52 @@ async function ensureTenantForUser(email: string, name?: string | null) {
   })
 }
 
-// Check if SMTP is configured
+// Check if Resend is configured (preferred) or fallback to SMTP
+const isResendConfigured = !!process.env.RESEND_API_KEY
 const isSmtpConfigured = !!(
   process.env.SMTP_HOST &&
   process.env.SMTP_USER &&
   process.env.SMTP_PASSWORD
 )
 
-if (!isSmtpConfigured && process.env.NODE_ENV === 'production') {
-  console.warn('⚠️  SMTP is not configured. Email authentication will not work.')
-  console.warn('Please set the following environment variables in your Vercel project:')
-  console.warn('  - SMTP_HOST (e.g., smtp.gmail.com, smtp.sendgrid.net, smtp.mailgun.org)')
-  console.warn('  - SMTP_PORT (e.g., 587 for TLS, 465 for SSL)')
-  console.warn('  - SMTP_USER (your SMTP username/email)')
-  console.warn('  - SMTP_PASSWORD (your SMTP password or app password)')
-  console.warn('  - SMTP_FROM (sender email address, optional)')
+if (!isResendConfigured && !isSmtpConfigured && process.env.NODE_ENV === 'production') {
+  console.warn('⚠️  Email service is not configured. Email authentication will not work.')
+  console.warn('Please set one of the following:')
+  console.warn('  Option 1 (Recommended): RESEND_API_KEY and RESEND_FROM')
+  console.warn('  Option 2: SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM')
 }
 
 export const authConfig = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
-    EmailProvider({
-      server: isSmtpConfigured
-        ? {
-            host: process.env.SMTP_HOST!,
-            port: Number(process.env.SMTP_PORT) || 587,
-            auth: {
-              user: process.env.SMTP_USER!,
-              pass: process.env.SMTP_PASSWORD!,
-            },
-            // Add secure connection options
-            secure: Number(process.env.SMTP_PORT) === 465,
-            tls: {
-              rejectUnauthorized: process.env.NODE_ENV === 'production',
-            },
-          }
-        : {
-            // Dummy config that will fail gracefully
-            host: 'localhost',
-            port: 587,
-            auth: {
-              user: 'noreply',
-              pass: 'password',
-            },
-          },
-      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@support-agent.com',
-    }),
+    isResendConfigured
+      ? ResendEmailProvider({
+          from: process.env.RESEND_FROM || 'noreply@support-agent.com',
+        })
+      : EmailProvider({
+          server: isSmtpConfigured
+            ? {
+                host: process.env.SMTP_HOST!,
+                port: Number(process.env.SMTP_PORT) || 587,
+                auth: {
+                  user: process.env.SMTP_USER!,
+                  pass: process.env.SMTP_PASSWORD!,
+                },
+                secure: Number(process.env.SMTP_PORT) === 465,
+                tls: {
+                  rejectUnauthorized: process.env.NODE_ENV === 'production',
+                },
+              }
+            : {
+                host: 'localhost',
+                port: 587,
+                auth: {
+                  user: 'noreply',
+                  pass: 'password',
+                },
+              },
+          from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@support-agent.com',
+        }),
   ],
   callbacks: {
     async signIn({ user, account, profile }) {

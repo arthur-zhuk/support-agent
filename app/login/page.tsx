@@ -51,9 +51,9 @@ function LoginForm() {
       if (result?.error) {
         // Handle specific error cases
         if (result.error === 'Configuration') {
-          toast.error('Email service is not configured. Please configure SMTP settings.', {
+          toast.error('Email service is not configured. Please configure email settings.', {
             duration: 8000,
-            description: 'Set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD environment variables in your Vercel project settings.',
+            description: 'Set RESEND_API_KEY and RESEND_FROM (recommended) or SMTP_HOST, SMTP_USER, and SMTP_PASSWORD environment variables in your Vercel project settings.',
           })
         } else if (result.error === 'AccessDenied') {
           toast.error('Access denied. Please contact support.')
