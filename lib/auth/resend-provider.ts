@@ -2,8 +2,14 @@ import { Resend } from 'resend'
 import type { EmailConfig, EmailUserConfig } from 'next-auth/providers/email'
 
 export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
-  const resend = new Resend(process.env.RESEND_API_KEY)
+  const apiKey = process.env.RESEND_API_KEY
   const from = options.from || process.env.RESEND_FROM || 'noreply@support-agent.com'
+
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured')
+  }
+
+  const resend = new Resend(apiKey)
 
   return {
     id: 'email',
@@ -19,9 +25,17 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
     },
     from,
     async sendVerificationRequest({ identifier: email, url, provider }) {
+      const senderEmail = provider.from as string
+      
+      console.log('Sending verification email via Resend:', {
+        from: senderEmail,
+        to: email,
+        hasApiKey: !!apiKey,
+      })
+
       try {
         const result = await resend.emails.send({
-          from: provider.from as string,
+          from: senderEmail,
           to: email,
           subject: 'Sign in to your account',
           html: `
@@ -44,10 +58,18 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
         })
 
         if (result.error) {
+          console.error('Resend API error:', result.error)
           throw new Error(`Resend error: ${result.error.message || JSON.stringify(result.error)}`)
         }
+
+        console.log('Email sent successfully via Resend:', result.data?.id)
       } catch (error: any) {
-        console.error('Failed to send email via Resend:', error)
+        console.error('Failed to send email via Resend:', {
+          error: error.message,
+          stack: error.stack,
+          from: senderEmail,
+          to: email,
+        })
         throw new Error(`Failed to send email: ${error.message || 'Unknown error'}`)
       }
     },
