@@ -99,12 +99,23 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(new URL(callbackUrl, request.nextUrl.origin))
     
-    response.cookies.set('next-auth.session-token', jwtToken, {
+    const cookieName = process.env.NODE_ENV === 'production' 
+      ? '__Secure-next-auth.session-token'
+      : 'next-auth.session-token'
+    
+    response.cookies.set(cookieName, jwtToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 30 * 24 * 60 * 60,
       path: '/',
+    })
+
+    console.log('[Magic Link Verify] Session cookie set:', {
+      cookieName,
+      userId: user.id,
+      email: user.email,
+      redirectTo: callbackUrl,
     })
 
     return response
