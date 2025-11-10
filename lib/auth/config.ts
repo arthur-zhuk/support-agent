@@ -3,6 +3,54 @@ import { prisma } from '@/lib/db/prisma'
 import type { NextAuthConfig } from 'next-auth'
 import EmailProvider from 'next-auth/providers/email'
 
+// Helper function to ensure tenant exists for a user
+async function ensureTenantForUser(email: string, name?: string | null) {
+  // First, check if user with this email already has a tenant
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+    include: { tenant: true },
+  })
+  
+  if (existingUser?.tenant) {
+    return existingUser.tenant
+  }
+  
+  // Generate tenant slug from email
+  const baseSlug = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-')
+  
+  // Try to find existing tenant with base slug (might have been created in signIn callback)
+  let existingTenant = await prisma.tenant.findUnique({ where: { slug: baseSlug } })
+  
+  if (existingTenant) {
+    return existingTenant
+  }
+  
+  // Find first available slug (base slug or with counter suffix)
+  let counter = 0
+  let uniqueSlug = baseSlug
+  
+  while (counter < 100) {
+    existingTenant = await prisma.tenant.findUnique({ where: { slug: uniqueSlug } })
+    
+    if (!existingTenant) {
+      // This slug is available, use it
+      break
+    }
+    
+    // Slug taken, try next
+    counter++
+    uniqueSlug = `${baseSlug}-${counter}`
+  }
+  
+  // Create new tenant with the available slug
+  return await prisma.tenant.create({
+    data: {
+      name: name || email.split('@')[0],
+      slug: uniqueSlug,
+    },
+  })
+}
+
 export const authConfig = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
@@ -20,41 +68,67 @@ export const authConfig = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (!user.email) return false
-
-      const existingUser = await prisma.user.findUnique({
-        where: { email: user.email },
-        include: { tenant: true },
-      })
-
-      if (!existingUser) {
-        const tenantSlug = user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-')
-        const tenant = await prisma.tenant.create({
-          data: {
-            name: user.name || user.email.split('@')[0],
-            slug: tenantSlug,
-            users: {
-              create: {
-                email: user.email,
-                name: user.name,
-                emailVerified: new Date(),
-              },
-            },
-          },
-        })
-        return true
+      if (!user.email) {
+        console.error('Sign in failed: No email provided')
+        return false
       }
 
-      return true
+      try {
+        // Check if user already exists
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          include: { tenant: true },
+        })
+
+        // If user exists and has a tenant, allow sign in
+        if (existingUser && existingUser.tenantId) {
+          return true
+        }
+
+        // If user exists but has no tenant, create one and link them
+        if (existingUser && !existingUser.tenantId) {
+          const tenant = await ensureTenantForUser(user.email, user.name)
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: { tenantId: tenant.id },
+          })
+          return true
+        }
+
+        // User doesn't exist - ensure tenant exists for when PrismaAdapter creates the user
+        // The tenant will be linked in the session callback
+        await ensureTenantForUser(user.email, user.name)
+        return true
+      } catch (error: any) {
+        console.error('Sign in callback error:', error)
+        // Don't block sign in - allow PrismaAdapter to handle user creation
+        // Tenant can be created later if needed
+        if (error.code === 'P2002') {
+          // Unique constraint violation - tenant might already exist, that's fine
+          return true
+        }
+        // For other errors, still allow sign in attempt
+        return true
+      }
     },
     async session({ session, user, token }) {
       if (session.user?.email) {
-        const dbUser = await prisma.user.findUnique({
+        let dbUser = await prisma.user.findUnique({
           where: { email: session.user.email },
           include: { tenant: true },
         })
 
-        if (dbUser) {
+        // If user exists but has no tenant, create one and link them
+        if (dbUser && !dbUser.tenantId) {
+          const tenant = await ensureTenantForUser(session.user.email, session.user.name)
+          dbUser = await prisma.user.update({
+            where: { id: dbUser.id },
+            data: { tenantId: tenant.id },
+            include: { tenant: true },
+          })
+        }
+
+        if (dbUser && dbUser.tenant) {
           return {
             ...session,
             user: {
