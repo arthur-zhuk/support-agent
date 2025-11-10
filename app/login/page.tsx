@@ -42,73 +42,37 @@ function LoginForm() {
     setEmailSent(false)
     
     try {
-      const result = await signIn('email', {
-        email: trimmedEmail.toLowerCase(),
-        redirect: false,
-        callbackUrl,
+      const response = await fetch('/api/auth/magic-link/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: trimmedEmail.toLowerCase(),
+          callbackUrl,
+        }),
       })
 
-      if (result?.error) {
-        // Log the full error for debugging
-        console.error('[Login] signIn error:', {
-          error: result.error,
-          url: result.url,
-          ok: result.ok,
-          status: result.status,
-        })
-        
-        // Handle specific error cases
-        if (result.error === 'Configuration') {
-          toast.error('Email service is not configured. Please configure email settings.', {
-            duration: 8000,
-            description: 'Set RESEND_API_KEY and RESEND_FROM (recommended) or SMTP_HOST, SMTP_USER, and SMTP_PASSWORD environment variables in your Vercel project settings.',
-          })
-        } else if (result.error === 'AccessDenied') {
-          toast.error('Access denied. Please contact support.')
-        } else if (result.error === 'Verification') {
-          toast.error('Verification failed. Please try again.')
-        } else {
-          // Show the actual error message
-          toast.error(`Failed to send email: ${result.error}. Please try again.`, {
-            duration: 10000,
-            description: 'Check the browser console for more details.',
-          })
-        }
+      const data = await response.json()
+
+      if (!response.ok || data.error) {
+        console.error('[Login] Magic link error:', data)
+        toast.error(data.error || 'Failed to send magic link. Please try again.')
         setLoading(false)
-      } else if (result?.ok) {
-        setEmailSent(true)
-        toast.success('Magic link sent! Check your email.')
-        // Redirect to verify email page after a short delay
-        setTimeout(() => {
-          router.push('/verify-email')
-        }, 1500)
-      } else {
-        // Unexpected result - log everything
-        console.error('[Login] Unexpected signIn result:', {
-          result,
-          hasError: !!result?.error,
-          hasOk: !!result?.ok,
-          error: result?.error,
-          url: result?.url,
-          status: result?.status,
-        })
-        toast.error('An unexpected error occurred. Please try again.', {
-          duration: 10000,
-          description: `Error: ${result?.error || 'Unknown'}. Check console for details.`,
-        })
-        setLoading(false)
+        return
       }
+
+      setEmailSent(true)
+      toast.success('Magic link sent! Check your email.')
+      setTimeout(() => {
+        router.push('/verify-email')
+      }, 1500)
     } catch (error: any) {
-      console.error('[Login] Sign in exception:', {
-        error,
-        message: error?.message,
-        stack: error?.stack,
-        name: error?.name,
+      console.error('[Login] Exception during magic link send:', {
+        message: error.message,
+        stack: error.stack,
       })
-      const errorMessage = error?.message || 'An unexpected error occurred'
-      toast.error(`Failed to sign in: ${errorMessage}. Please try again.`, {
+      toast.error('An unexpected error occurred. Please try again.', {
         duration: 10000,
-        description: 'Check the browser console for more details.',
+        description: error.message || 'Unknown error',
       })
       setLoading(false)
     }
