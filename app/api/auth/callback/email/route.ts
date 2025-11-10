@@ -1,10 +1,5 @@
 import { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
-import NextAuth from 'next-auth'
-import { authConfig } from '@/lib/auth/config'
-
-const nextAuth = NextAuth(authConfig)
-const { handlers } = nextAuth
+import { handlers } from '@/app/api/auth/[...nextauth]/route'
 
 export async function GET(request: NextRequest) {
   console.log('[Email Callback Route] Handling callback:', {
@@ -13,10 +8,17 @@ export async function GET(request: NextRequest) {
   })
   
   try {
-    return handlers.GET(request)
+    const response = await handlers.GET(request)
+    console.log('[Email Callback Route] Response:', {
+      status: response.status,
+      redirected: response.redirected,
+      url: response.url,
+    })
+    return response
   } catch (error: any) {
     console.error('[Email Callback Route] Error:', error)
-    return NextResponse.redirect(new URL('/login?error=Verification', request.url))
+    const url = new URL('/login?error=Verification', request.url)
+    return Response.redirect(url)
   }
 }
 
