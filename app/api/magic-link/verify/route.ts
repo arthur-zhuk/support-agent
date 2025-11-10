@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
         picture: user.image,
       },
       secret: process.env.NEXTAUTH_SECRET!,
+      salt: 'authjs.session-token',
       maxAge: 30 * 24 * 60 * 60,
     })
 
