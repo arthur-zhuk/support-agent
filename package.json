@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:resend": "tsx scripts/test-resend-local.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.64",
@@ -56,9 +57,11 @@
     "@types/node": "^20.19.24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5"
   }
