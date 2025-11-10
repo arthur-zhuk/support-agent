@@ -52,53 +52,51 @@ async function ensureTenantForUser(email: string, name?: string | null) {
   })
 }
 
-// Check if Resend is configured (preferred) or fallback to SMTP
-const isResendConfigured = !!process.env.RESEND_API_KEY
-const isSmtpConfigured = !!(
-  process.env.SMTP_HOST &&
-  process.env.SMTP_USER &&
-  process.env.SMTP_PASSWORD
-)
+// Function to get email provider - checks at runtime, not module load time
+function getEmailProvider() {
+  // Check Resend first (preferred)
+  if (process.env.RESEND_API_KEY) {
+    return ResendEmailProvider({
+      from: process.env.RESEND_FROM || 'noreply@support-agent.com',
+    })
+  }
 
-if (!isResendConfigured && !isSmtpConfigured && process.env.NODE_ENV === 'production') {
-  console.warn('⚠️  Email service is not configured. Email authentication will not work.')
-  console.warn('Please set one of the following:')
-  console.warn('  Option 1 (Recommended): RESEND_API_KEY and RESEND_FROM')
-  console.warn('  Option 2: SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM')
+  // Fallback to SMTP if configured
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
+    return EmailProvider({
+      server: {
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASSWORD,
+        },
+        secure: Number(process.env.SMTP_PORT) === 465,
+        tls: {
+          rejectUnauthorized: process.env.NODE_ENV === 'production',
+        },
+      },
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@support-agent.com',
+    })
+  }
+
+  // Fallback to dummy provider that will show a helpful error
+  return EmailProvider({
+    server: {
+      host: 'localhost',
+      port: 587,
+      auth: {
+        user: 'noreply',
+        pass: 'password',
+      },
+    },
+    from: 'noreply@support-agent.com',
+  })
 }
 
 export const authConfig = {
   adapter: PrismaAdapter(prisma) as any,
-  providers: [
-    isResendConfigured
-      ? ResendEmailProvider({
-          from: process.env.RESEND_FROM || 'noreply@support-agent.com',
-        })
-      : EmailProvider({
-          server: isSmtpConfigured
-            ? {
-                host: process.env.SMTP_HOST!,
-                port: Number(process.env.SMTP_PORT) || 587,
-                auth: {
-                  user: process.env.SMTP_USER!,
-                  pass: process.env.SMTP_PASSWORD!,
-                },
-                secure: Number(process.env.SMTP_PORT) === 465,
-                tls: {
-                  rejectUnauthorized: process.env.NODE_ENV === 'production',
-                },
-              }
-            : {
-                host: 'localhost',
-                port: 587,
-                auth: {
-                  user: 'noreply',
-                  pass: 'password',
-                },
-              },
-          from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@support-agent.com',
-        }),
-  ],
+  providers: [getEmailProvider()],
   callbacks: {
     async signIn({ user, account, profile }) {
       if (!user.email) {

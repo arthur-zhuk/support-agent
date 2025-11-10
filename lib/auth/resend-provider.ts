@@ -2,14 +2,10 @@ import { Resend } from 'resend'
 import type { EmailConfig, EmailUserConfig } from 'next-auth/providers/email'
 
 export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
-  const apiKey = process.env.RESEND_API_KEY
   const from = options.from || process.env.RESEND_FROM || 'noreply@support-agent.com'
 
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is not configured')
-  }
-
-  const resend = new Resend(apiKey)
+  // Don't initialize Resend here - do it lazily in sendVerificationRequest
+  // This prevents errors during module initialization when env vars might not be available
 
   return {
     id: 'email',
@@ -26,6 +22,14 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
     from,
     async sendVerificationRequest({ identifier: email, url, provider }) {
       const senderEmail = provider.from as string
+      const apiKey = process.env.RESEND_API_KEY
+      
+      if (!apiKey) {
+        console.error('RESEND_API_KEY is not configured')
+        throw new Error('Email service is not configured. RESEND_API_KEY is missing.')
+      }
+
+      const resend = new Resend(apiKey)
       
       console.log('Sending verification email via Resend:', {
         from: senderEmail,
