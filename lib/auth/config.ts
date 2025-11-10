@@ -57,11 +57,20 @@ const getEmailProvider = () => {
   const apiKey = process.env.RESEND_API_KEY?.trim()
   const resendFrom = (process.env.RESEND_FROM || 'noreply@support-agent.com').trim()
   
+  console.log('[Auth Config] getEmailProvider called:', {
+    hasApiKey: !!apiKey,
+    apiKeyLength: apiKey?.length || 0,
+    resendFrom,
+    nodeEnv: process.env.NODE_ENV,
+  })
+  
   if (apiKey) {
     console.log('[Auth Config] Using built-in Resend provider')
+    // The built-in Resend provider expects apiKey and from in the config
+    // It will make these available as provider.apiKey and provider.from
     return ResendProvider({
-      apiKey,
-      from: resendFrom,
+      apiKey: apiKey, // Explicitly pass apiKey
+      from: resendFrom, // Override the default from address
     })
   }
   

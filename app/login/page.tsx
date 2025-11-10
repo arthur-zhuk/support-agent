@@ -49,6 +49,14 @@ function LoginForm() {
       })
 
       if (result?.error) {
+        // Log the full error for debugging
+        console.error('[Login] signIn error:', {
+          error: result.error,
+          url: result.url,
+          ok: result.ok,
+          status: result.status,
+        })
+        
         // Handle specific error cases
         if (result.error === 'Configuration') {
           toast.error('Email service is not configured. Please configure email settings.', {
@@ -60,7 +68,11 @@ function LoginForm() {
         } else if (result.error === 'Verification') {
           toast.error('Verification failed. Please try again.')
         } else {
-          toast.error(`Failed to send email: ${result.error}. Please try again.`)
+          // Show the actual error message
+          toast.error(`Failed to send email: ${result.error}. Please try again.`, {
+            duration: 10000,
+            description: 'Check the browser console for more details.',
+          })
         }
         setLoading(false)
       } else if (result?.ok) {
@@ -71,15 +83,33 @@ function LoginForm() {
           router.push('/verify-email')
         }, 1500)
       } else {
-        // Unexpected result
-        console.error('Unexpected signIn result:', result)
-        toast.error('An unexpected error occurred. Please try again.')
+        // Unexpected result - log everything
+        console.error('[Login] Unexpected signIn result:', {
+          result,
+          hasError: !!result?.error,
+          hasOk: !!result?.ok,
+          error: result?.error,
+          url: result?.url,
+          status: result?.status,
+        })
+        toast.error('An unexpected error occurred. Please try again.', {
+          duration: 10000,
+          description: `Error: ${result?.error || 'Unknown'}. Check console for details.`,
+        })
         setLoading(false)
       }
     } catch (error: any) {
-      console.error('Sign in error:', error)
+      console.error('[Login] Sign in exception:', {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name,
+      })
       const errorMessage = error?.message || 'An unexpected error occurred'
-      toast.error(`Failed to sign in: ${errorMessage}. Please try again.`)
+      toast.error(`Failed to sign in: ${errorMessage}. Please try again.`, {
+        duration: 10000,
+        description: 'Check the browser console for more details.',
+      })
       setLoading(false)
     }
   }
