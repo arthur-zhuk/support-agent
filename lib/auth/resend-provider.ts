@@ -24,17 +24,28 @@ export function ResendEmailProvider(options: EmailUserConfig): EmailConfig {
       const senderEmail = provider.from as string
       const apiKey = process.env.RESEND_API_KEY
       
+      console.log('[ResendEmailProvider] sendVerificationRequest called:', {
+        from: senderEmail,
+        to: email,
+        hasApiKey: !!apiKey,
+        apiKeyLength: apiKey?.length || 0,
+        nodeEnv: process.env.NODE_ENV,
+      })
+      
       if (!apiKey) {
-        console.error('RESEND_API_KEY is not configured')
-        throw new Error('Email service is not configured. RESEND_API_KEY is missing.')
+        const errorMsg = 'Email service is not configured. RESEND_API_KEY is missing. Please set RESEND_API_KEY and RESEND_FROM environment variables in your Vercel project settings.'
+        console.error('[ResendEmailProvider]', errorMsg)
+        // Throw Configuration error so NextAuth recognizes it properly
+        const error: any = new Error(errorMsg)
+        error.type = 'Configuration'
+        throw error
       }
 
       const resend = new Resend(apiKey)
       
-      console.log('Sending verification email via Resend:', {
+      console.log('[ResendEmailProvider] Sending email via Resend:', {
         from: senderEmail,
         to: email,
-        hasApiKey: !!apiKey,
       })
 
       try {

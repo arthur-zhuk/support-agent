@@ -52,46 +52,12 @@ async function ensureTenantForUser(email: string, name?: string | null) {
   })
 }
 
-// Function to get email provider - checks at runtime, not module load time
-function getEmailProvider() {
-  // Check Resend first (preferred)
-  if (process.env.RESEND_API_KEY) {
-    return ResendEmailProvider({
-      from: process.env.RESEND_FROM || 'noreply@support-agent.com',
-    })
-  }
-
-  // Fallback to SMTP if configured
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD) {
-    return EmailProvider({
-      server: {
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT) || 587,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASSWORD,
-        },
-        secure: Number(process.env.SMTP_PORT) === 465,
-        tls: {
-          rejectUnauthorized: process.env.NODE_ENV === 'production',
-        },
-      },
-      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@support-agent.com',
-    })
-  }
-
-  // Fallback to dummy provider that will show a helpful error
-  return EmailProvider({
-    server: {
-      host: 'localhost',
-      port: 587,
-      auth: {
-        user: 'noreply',
-        pass: 'password',
-      },
-    },
-    from: 'noreply@support-agent.com',
-  })
+// Always use ResendEmailProvider - it checks for API key lazily at send time
+// This ensures the provider is always valid from NextAuth's perspective
+// The actual API key check happens inside sendVerificationRequest
+const getEmailProvider = () => {
+  const resendFrom = process.env.RESEND_FROM || 'noreply@support-agent.com'
+  return ResendEmailProvider({ from: resendFrom })
 }
 
 export const authConfig = {
