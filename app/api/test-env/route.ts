@@ -10,7 +10,14 @@ export async function GET() {
     resendFrom,
     apiKeyLength,
     nodeEnv: process.env.NODE_ENV,
-    allEnvKeys: Object.keys(process.env).filter(key => key.includes('RESEND') || key.includes('SMTP')),
+    nextAuthUrl: process.env.NEXTAUTH_URL,
+    vercelUrl: process.env.VERCEL_URL,
+    allEnvKeys: Object.keys(process.env).filter(key => 
+      key.includes('RESEND') || 
+      key.includes('SMTP') || 
+      key.includes('NEXTAUTH') || 
+      key === 'VERCEL_URL'
+    ),
   })
 }
 
