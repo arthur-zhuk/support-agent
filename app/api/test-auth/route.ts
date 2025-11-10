@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { signIn } from '@/app/api/auth/[...nextauth]/route'
 
 export async function POST(request: Request) {
   try {
@@ -11,25 +10,53 @@ export async function POST(request: Request) {
 
     console.log('[Test Auth] Attempting to sign in with email:', email)
     
-    const result = await signIn('email', {
-      email: email.toLowerCase(),
-      redirect: false,
-      callbackUrl: '/dashboard/connections',
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const signInUrl = `${baseUrl}/api/auth/signin/email`
+    
+    const formData = new URLSearchParams()
+    formData.append('email', email.toLowerCase())
+    formData.append('callbackUrl', '/dashboard/connections')
+    formData.append('csrfToken', 'test') // CSRF token might be needed
+    
+    const response = await fetch(signInUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
     })
 
-    console.log('[Test Auth] signIn result:', {
-      ok: result?.ok,
-      error: result?.error,
-      url: result?.url,
-      status: result?.status,
+    const responseText = await response.text()
+    console.log('[Test Auth] NextAuth response:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      body: responseText.substring(0, 500),
     })
+
+    if (response.redirected) {
+      return NextResponse.json({
+        success: true,
+        redirected: true,
+        redirectUrl: response.url,
+        status: response.status,
+      })
+    }
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        status: response.status,
+        message: 'Email should be sent',
+      })
+    }
 
     return NextResponse.json({
-      success: result?.ok || false,
-      error: result?.error || null,
-      url: result?.url || null,
-      status: result?.status || null,
-    })
+      success: false,
+      error: `HTTP ${response.status}: ${response.statusText}`,
+      status: response.status,
+      body: responseText.substring(0, 200),
+    }, { status: response.status })
   } catch (error: any) {
     console.error('[Test Auth] Error:', {
       message: error.message,

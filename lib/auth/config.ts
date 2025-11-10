@@ -66,23 +66,30 @@ const getEmailProvider = () => {
   
   if (apiKey) {
     console.log('[Auth Config] Using built-in Resend provider')
-    // The built-in Resend provider expects apiKey and from in the config
-    // Note: The provider accesses provider.apiKey, so we need to ensure it's set
-    const resendConfig = ResendProvider({
-      apiKey: apiKey, // Pass apiKey in config
-      from: resendFrom, // Override the default from address
+    // The built-in Resend provider accesses provider.apiKey directly
+    // NextAuth merges options into provider, but we ensure apiKey is directly accessible
+    const baseConfig = ResendProvider({
+      apiKey: apiKey,
+      from: resendFrom,
+    }) as any
+    
+    // Ensure apiKey is directly on the provider object (not just in options)
+    // The provider accesses provider.apiKey in sendVerificationRequest
+    baseConfig.apiKey = apiKey
+    
+    // Also ensure it's in options for NextAuth's internal handling
+    if (baseConfig.options) {
+      baseConfig.options.apiKey = apiKey
+    }
+    
+    console.log('[Auth Config] Resend provider configured:', {
+      hasFrom: !!baseConfig.from,
+      from: baseConfig.from,
+      hasApiKey: !!baseConfig.apiKey,
+      hasOptionsApiKey: !!baseConfig.options?.apiKey,
     })
     
-    // Ensure apiKey is available on the provider object itself
-    // (The built-in provider accesses provider.apiKey in sendVerificationRequest)
-    if (!resendConfig.apiKey) {
-      resendConfig.apiKey = apiKey
-    }
-    if (resendConfig.from !== resendFrom) {
-      resendConfig.from = resendFrom
-    }
-    
-    return resendConfig
+    return baseConfig
   }
   
   // Fallback to standard EmailProvider if Resend is not configured
