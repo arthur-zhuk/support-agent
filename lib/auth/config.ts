@@ -184,6 +184,15 @@ export const authConfig = {
       }
       return token
     },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`
+      }
+      if (new URL(url).origin === baseUrl) {
+        return url
+      }
+      return `${baseUrl}/dashboard/connections`
+    },
   },
   pages: {
     signIn: '/login',
