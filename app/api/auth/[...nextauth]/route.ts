@@ -15,21 +15,6 @@ const { handlers, auth, signIn, signOut } = nextAuth
 
 console.log('[NextAuth Route] NextAuth initialized successfully')
 
-export { auth, signIn, signOut, handlers }
-export async function GET(request: NextRequest) {
-  const url = new URL(request.url)
-  console.log('[NextAuth Route] GET request:', {
-    pathname: url.pathname,
-    searchParams: Object.fromEntries(url.searchParams.entries()),
-  })
-  return handlers.GET(request)
-}
-export async function POST(request: NextRequest) {
-  const url = new URL(request.url)
-  console.log('[NextAuth Route] POST request:', {
-    pathname: url.pathname,
-    searchParams: Object.fromEntries(url.searchParams.entries()),
-  })
-  return handlers.POST(request)
-}
+export { auth, signIn, signOut }
+export const { GET, POST } = handlers
 
