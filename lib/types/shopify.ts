@@ -1,4 +1,5 @@
 export type ShopifyOrder = {
+  id?: string
   order_number: string
   financial_status: string
   fulfillment_status: string

@@ -35,7 +35,7 @@ export function getIntercomTools(tenantId: string) {
   return {
     createTicket: tool({
       description: 'Create a support ticket in Intercom with full conversation context',
-      parameters: z.object({
+      inputSchema: z.object({
         subject: z.string().describe('Ticket subject'),
         body: z.string().describe('Ticket body with full context'),
         priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
@@ -74,11 +74,11 @@ export function getIntercomTools(tenantId: string) {
           ticketNumber: data.ticket_attributes?._default_title_,
         }
       },
-    } as any),
+    }),
 
     escalateToHuman: tool({
       description: 'Escalate the conversation to a human agent in Intercom with full context',
-      parameters: z.object({
+      inputSchema: z.object({
         conversationId: z.string().optional(),
         message: z.string().describe('Summary of why escalation is needed'),
         transcript: z.string().describe('Full conversation transcript'),
@@ -121,7 +121,7 @@ export function getIntercomTools(tenantId: string) {
           message: 'Conversation escalated to human agent. They will respond shortly.',
         }
       },
-    } as any),
+    }),
   }
 }
 

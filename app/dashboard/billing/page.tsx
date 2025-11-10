@@ -5,6 +5,8 @@ import { CreditCard, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { BillingClient } from './billing-client'
 import type { Subscription } from '@prisma/client'
+import { getTenantId } from '@/lib/auth/tenant'
+import { redirect } from 'next/navigation'
 
 async function getSubscription(tenantId: string): Promise<Subscription | null> {
   try {
@@ -28,8 +30,10 @@ const PLANS = [
     description: 'Perfect for small stores',
     features: [
       'Up to 1,000 conversations/month',
-      'Basic knowledge base',
-      'Shopify integration',
+      'Auto-ingest URLs, sitemaps & files',
+      'RAG-based accurate answers',
+      'Source citations',
+      'Embeddable widget',
       'Email support',
     ],
     priceId: process.env.STRIPE_STARTER_PRICE_ID || 'price_1SRdhDISn03FmR1gcU7S41DB',
@@ -42,8 +46,11 @@ const PLANS = [
     description: 'For growing businesses',
     features: [
       'Up to 10,000 conversations/month',
-      'Unlimited knowledge base',
-      'Shopify + Intercom integration',
+      'Unlimited knowledge bases',
+      'Auto-ingest URLs, sitemaps & files',
+      'RAG-based accurate answers',
+      'Source citations',
+      'Custom branding',
       'Priority support',
       'Advanced analytics',
     ],
@@ -70,7 +77,10 @@ const PLANS = [
 export default async function BillingPage(props: {
   searchParams: Promise<{ success?: string; canceled?: string }>
 }) {
-  const tenantId = 'demo-tenant'
+  const tenantId = await getTenantId()
+  if (!tenantId) {
+    redirect('/login?callbackUrl=/dashboard/billing')
+  }
   const searchParams = await props.searchParams
   const subscription = await getSubscription(tenantId)
 

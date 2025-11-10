@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MessageSquare, CheckCircle2, ArrowUpRight, TrendingUp } from 'lucide-react'
 import type { MetricsDaily } from '@prisma/client'
+import { getTenantId } from '@/lib/auth/tenant'
+import { redirect } from 'next/navigation'
 
 async function getMetrics(tenantId: string): Promise<MetricsDaily[]> {
   try {
@@ -18,7 +20,10 @@ async function getMetrics(tenantId: string): Promise<MetricsDaily[]> {
 }
 
 export default async function AnalyticsPage() {
-  const tenantId = 'demo-tenant'
+  const tenantId = await getTenantId()
+  if (!tenantId) {
+    redirect('/login?callbackUrl=/dashboard/analytics')
+  }
 
   const metrics = await getMetrics(tenantId)
 

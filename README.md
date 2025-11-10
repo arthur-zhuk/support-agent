@@ -1,15 +1,15 @@
-# Support Agent - Order-Aware AI Support Widget
+# AI Knowledge Base Widget
 
-A B2B SaaS that converts your store's documentation and storefront data into an intelligent, order-aware support agent. Built with Next.js 16, AI SDK v6, and designed for marketplace distribution (Shopify App Store, Intercom App Store).
+A simple, powerful B2B SaaS that automatically ingests your documentation and creates an AI-powered support widget. No manual FAQ entry needed—just add URLs, sitemaps, or files and your AI assistant learns instantly. Built with Next.js 16, AI SDK v5, and designed for marketplace distribution (Shopify App Store, WooCommerce, and more).
 
 ## Features
 
-- **AI-Powered Support Agent**: Uses OpenAI GPT-4o with tool-calling to answer questions, check order status, process returns, and escalate to human agents
-- **Knowledge Base RAG**: Ingest URLs, sitemaps, or files to build a searchable knowledge base with vector embeddings
-- **Shopify Integration**: Connect your Shopify store to enable order lookup, returns, cancellations, and return label generation
-- **Intercom Integration**: Seamlessly escalate conversations to Intercom with full context
-- **Embeddable Widget**: Copy-paste script tag to embed the support agent on any website
-- **Analytics Dashboard**: Track conversations, deflections, escalations, and cost estimates
+- **🚀 Auto-Ingest Knowledge Base**: Automatically crawl and index your help docs, FAQs, and documentation from URLs, sitemaps, or files—no manual entry needed
+- **🎯 RAG-Based Accuracy**: Uses vector embeddings (pgvector) for precise, context-aware answers from your knowledge base
+- **📝 Source Citations**: AI responses include source URLs so customers can verify information
+- **💬 Embeddable Widget**: One-line script tag to embed an AI-powered support widget on any website
+- **📊 Analytics Dashboard**: Track conversations, deflection rates, and cost estimates
+- **🔄 Auto-Refresh**: Re-ingest knowledge bases with one click to keep content up-to-date
 
 ## Tech Stack
 
@@ -17,7 +17,7 @@ A B2B SaaS that converts your store's documentation and storefront data into an 
 - **AI**: AI SDK v6 with OpenAI GPT-4o
 - **Database**: PostgreSQL with Prisma ORM and pgvector extension
 - **Embeddings**: OpenAI text-embedding-3-small
-- **Integrations**: Shopify Admin API, Intercom API
+- **Integrations**: Works on any website—Shopify, WooCommerce, or custom sites
 - **UI Components**: shadcn/ui with Tailwind CSS
 - **MCP Integration**: Next.js MCP, Vercel MCP, and shadcn MCP for enhanced development experience
 
@@ -28,8 +28,6 @@ A B2B SaaS that converts your store's documentation and storefront data into an 
 - Node.js 18+ 
 - PostgreSQL database with pgvector extension
 - OpenAI API key
-- Shopify Partner account (for OAuth app)
-- Intercom developer account (for OAuth app)
 
 ### MCP Integration
 
@@ -55,26 +53,49 @@ npm install
 ```
 
 3. Set up environment variables:
-Create a `.env` file in the root directory:
+Create a `.env.local` file in the root directory (see `.env.example` for reference):
 
 ```env
+# Database
 DATABASE_URL="postgresql://user:password@localhost:5432/support_agent?schema=public"
+PRISMA_DATABASE_URL="prisma+postgres://..."
 
+# NextAuth (for production, NEXTAUTH_URL is auto-set by Vercel)
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-secret-key-here"
 
+# Email (for production auth)
+SMTP_HOST="smtp.example.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@example.com"
+SMTP_PASSWORD="your-password"
+SMTP_FROM="noreply@support-agent.com"
+
+# OpenAI
 OPENAI_API_KEY="sk-..."
 
+# Shopify
 SHOPIFY_API_KEY="your-shopify-api-key"
 SHOPIFY_API_SECRET="your-shopify-api-secret"
 SHOPIFY_APP_URL="http://localhost:3000"
 
+# Intercom
 INTERCOM_CLIENT_ID="your-intercom-client-id"
 INTERCOM_CLIENT_SECRET="your-intercom-client-secret"
 INTERCOM_REDIRECT_URI="http://localhost:3000/api/oauth/intercom"
 
+# Stripe
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+STRIPE_STARTER_PRICE_ID="price_..."
+STRIPE_PRO_PRICE_ID="price_..."
+
+# JWT
 JWT_SECRET="your-jwt-secret-key"
 ```
+
+**For production deployment on Vercel**, see `VERCEL_ENV_SETUP.md` for detailed instructions.
 
 4. Set up the database:
 ```bash
@@ -91,13 +112,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the dashboard.
 
 ## Usage
 
-### 1. Connect Integrations
-
-Navigate to `/dashboard/connections` and connect:
-- **Shopify**: Click "Connect" and authorize the app
-- **Intercom**: Click "Connect" and authorize the app
-
-### 2. Build Knowledge Base
+### 1. Build Knowledge Base
 
 Go to `/dashboard/knowledge` and:
 - Add URLs (e.g., `https://yourstore.com/help`)
@@ -110,7 +125,7 @@ The system will automatically:
 - Generate vector embeddings
 - Store in PostgreSQL with pgvector
 
-### 3. Embed Widget
+### 2. Embed Widget
 
 Copy the embed script from the Knowledge Base page and add it to your website:
 
@@ -120,7 +135,7 @@ Copy the embed script from the Knowledge Base page and add it to your website:
 
 The widget will appear as a chat bubble in the bottom-right corner.
 
-### 4. View Analytics
+### 3. View Analytics
 
 Check `/dashboard/analytics` for:
 - Total conversations
@@ -140,10 +155,6 @@ Check `/dashboard/analytics` for:
 - Ingests a URL into the knowledge base
 - Requires: `tenantId`, `url`
 
-### OAuth Callbacks
-- `GET /api/oauth/shopify` - Shopify OAuth callback
-- `GET /api/oauth/intercom` - Intercom OAuth callback
-
 ### Embed Widget
 `GET /api/embed?tenantId=...`
 - Returns embeddable JavaScript widget
@@ -151,13 +162,9 @@ Check `/dashboard/analytics` for:
 ## Architecture
 
 ### AI Agent (`lib/ai/agent.ts`)
-- Orchestrates tool-calling with structured outputs
-- Integrates Shopify tools, Intercom tools, and knowledge search
-- Streams responses using AI SDK v6
-
-### Tools (`lib/ai/tools/`)
-- **Shopify**: Order lookup, returns, cancellations, label generation
-- **Intercom**: Ticket creation, escalation with context
+- Uses knowledge base search tool for RAG-based answers
+- Streams responses using AI SDK v5
+- Includes source citations in responses
 
 ### RAG System (`lib/rag/`)
 - **Ingest**: URL crawling, sitemap parsing, file processing
@@ -171,16 +178,26 @@ Check `/dashboard/analytics` for:
 
 ### Shopify App Store
 1. Create a Shopify Partner account
-2. Create a new app with OAuth scopes: `read_orders`, `write_orders`
-3. Set redirect URI: `https://yourdomain.com/api/oauth/shopify`
-4. Submit for review
-
-### Intercom App Store
-1. Create an Intercom developer account
-2. Register OAuth app with redirect URI: `https://yourdomain.com/api/oauth/intercom`
-3. Submit for review
+2. Create a new app (no OAuth needed—just embed the widget!)
+3. Emphasize in listing: "Auto-ingest your help docs—no manual FAQ entry needed"
+4. Highlight unique features: URL/sitemap/file upload, RAG-based accuracy, source citations
+5. Submit for review
 
 ## Development
+
+### Development Auth Bypass
+
+For easier development, the app includes a dev auth bypass that automatically logs you in as a dev user without requiring email authentication.
+
+**To use dev login:**
+1. Navigate to `/dev-login` or click "Dev Login" on the regular login page
+2. Click "Login as Dev User"
+3. You'll be automatically logged in as `dev@localhost` with tenant `dev-tenant`
+
+**To disable dev auth bypass:**
+Set `DEV_AUTH_BYPASS=false` in your `.env.local` file.
+
+**Note:** Dev auth bypass is automatically disabled in production builds.
 
 ### Database Migrations
 ```bash

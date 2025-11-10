@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const config = {
     tenantId: '${tenantId}',
     token: '${token}',
-    apiUrl: '${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api',
+    apiUrl: '${process.env.NEXTAUTH_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')}/api',
   };
 
   const widget = document.createElement('div');
@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
             border: 1px solid #e5e5e5;
             border-radius: 8px;
             outline: none;
+            box-sizing: border-box;
           " />
         </div>
       </div>
@@ -99,12 +100,18 @@ export async function GET(req: NextRequest) {
       if (msg.role === 'user') {
         const userMsg = document.createElement('div');
         userMsg.style.cssText = 'margin-bottom: 12px; text-align: right;';
-        userMsg.innerHTML = \`<div style="display: inline-block; background: #0070f3; color: white; padding: 8px 12px; border-radius: 12px; max-width: 80%;">\${escapeHtml(msg.content)}</div>\`;
+        const userDiv = document.createElement('div');
+        userDiv.style.cssText = 'display: inline-block; background: #0070f3; color: white; padding: 8px 12px; border-radius: 12px; max-width: 80%;';
+        userDiv.textContent = msg.content;
+        userMsg.appendChild(userDiv);
         messages.appendChild(userMsg);
       } else if (msg.role === 'assistant') {
         const assistantMsg = document.createElement('div');
         assistantMsg.style.cssText = 'margin-bottom: 12px;';
-        assistantMsg.innerHTML = \`<div style="display: inline-block; background: #f5f5f5; padding: 8px 12px; border-radius: 12px; max-width: 80%;">\${escapeHtml(msg.content)}</div>\`;
+        const assistantDiv = document.createElement('div');
+        assistantDiv.style.cssText = 'display: inline-block; background: #f5f5f5; padding: 8px 12px; border-radius: 12px; max-width: 80%;';
+        assistantDiv.textContent = msg.content;
+        assistantMsg.appendChild(assistantDiv);
         messages.appendChild(assistantMsg);
       }
     });
@@ -131,7 +138,10 @@ export async function GET(req: NextRequest) {
     input.disabled = true;
     const userMsg = document.createElement('div');
     userMsg.style.cssText = 'margin-bottom: 12px; text-align: right;';
-    userMsg.innerHTML = \`<div style="display: inline-block; background: #0070f3; color: white; padding: 8px 12px; border-radius: 12px; max-width: 80%;">\${escapeHtml(text)}</div>\`;
+    const userDiv = document.createElement('div');
+    userDiv.style.cssText = 'display: inline-block; background: #0070f3; color: white; padding: 8px 12px; border-radius: 12px; max-width: 80%;';
+    userDiv.textContent = text;
+    userMsg.appendChild(userDiv);
     messages.appendChild(userMsg);
     messages.scrollTop = messages.scrollHeight;
 
@@ -147,13 +157,35 @@ export async function GET(req: NextRequest) {
       }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorMessage = 'Failed to get response';
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.error || errorJson.details || errorMessage;
+      } catch {
+        errorMessage = errorText || errorMessage;
+      }
+      const errorMsg = document.createElement('div');
+      errorMsg.style.cssText = 'margin-bottom: 12px;';
+      const errorDiv = document.createElement('div');
+      errorDiv.style.cssText = 'display: inline-block; background: #fee; color: #c33; padding: 8px 12px; border-radius: 12px; max-width: 80%;';
+      errorDiv.textContent = errorMessage;
+      errorMsg.appendChild(errorDiv);
+      messages.appendChild(errorMsg);
+      input.disabled = false;
+      input.focus();
+      return;
+    }
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = '';
+    let assistantMessage = '';
+    let hasReceivedData = false;
 
     const assistantMsg = document.createElement('div');
     assistantMsg.style.cssText = 'margin-bottom: 12px;';
-    assistantMsg.innerHTML = '<div style="display: inline-block; background: #f5f5f5; padding: 8px 12px; border-radius: 12px;"></div>';
+    assistantMsg.innerHTML = '<div style="display: inline-block; background: #f5f5f5; padding: 8px 12px; border-radius: 12px; max-width: 80%;"></div>';
     messages.appendChild(assistantMsg);
     const contentDiv = assistantMsg.querySelector('div');
 
@@ -161,27 +193,23 @@ export async function GET(req: NextRequest) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (line.startsWith('0:')) {
-          try {
-            const data = JSON.parse(line.slice(2));
-            if (data.type === 'text-delta') {
-              contentDiv.textContent += data.textDelta;
-              messages.scrollTop = messages.scrollHeight;
-            }
-          } catch (e) {
-            console.error('Failed to parse stream data:', e);
-          }
-        }
-      }
+      hasReceivedData = true;
+      assistantMessage += decoder.decode(value, { stream: true });
+      contentDiv.textContent = assistantMessage;
+      messages.scrollTop = messages.scrollHeight;
     }
     
-    const finalText = contentDiv.textContent;
-    conversationHistory.push({ role: 'assistant', content: finalText });
+    if (!assistantMessage.trim()) {
+      const errorMsg = hasReceivedData 
+        ? 'I received your message, but the response stream was empty. Please check your configuration.'
+        : 'I received your message, but I did not get a response. Please try again.';
+      contentDiv.textContent = errorMsg;
+      contentDiv.style.background = '#fee';
+      contentDiv.style.color = '#c33';
+    } else {
+      conversationHistory.push({ role: 'assistant', content: assistantMessage });
+    }
+    
     input.disabled = false;
     input.focus();
   }

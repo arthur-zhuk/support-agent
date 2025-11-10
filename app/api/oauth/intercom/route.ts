@@ -1,15 +1,28 @@
 import { prisma } from '@/lib/db/prisma'
 import { NextRequest, NextResponse } from 'next/server'
+import { env } from '@/lib/env'
 
-const INTERCOM_CLIENT_ID = process.env.INTERCOM_CLIENT_ID!
-const INTERCOM_CLIENT_SECRET = process.env.INTERCOM_CLIENT_SECRET!
-const INTERCOM_REDIRECT_URI = process.env.INTERCOM_REDIRECT_URI || `${process.env.NEXTAUTH_URL}/api/oauth/intercom`
+const INTERCOM_CLIENT_ID = env.intercom.clientId!
+const INTERCOM_CLIENT_SECRET = env.intercom.clientSecret!
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams
   const code = searchParams.get('code')
   const state = searchParams.get('state')
-  const tenantId = state || searchParams.get('tenantId') || 'demo-tenant'
+  const tenantId = state || searchParams.get('tenantId')
+  const error = searchParams.get('error')
+  const errorDescription = searchParams.get('error_description')
+  
+  if (error) {
+    console.error('Intercom OAuth error:', error, errorDescription)
+    return NextResponse.redirect(
+      `${env.baseUrl}/dashboard/connections?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || '')}`
+    )
+  }
+  
+  if (!tenantId) {
+    return NextResponse.json({ error: 'Missing tenantId' }, { status: 400 })
+  }
 
   if (!code) {
     return NextResponse.json({ error: 'Missing authorization code' }, { status: 400 })
@@ -57,9 +70,6 @@ export async function GET(req: NextRequest) {
     },
   })
 
-  const baseUrl = process.env.NEXTAUTH_URL || 
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-  
-  return NextResponse.redirect(`${baseUrl}/dashboard/connections?connected=intercom`)
+  return NextResponse.redirect(`${env.baseUrl}/dashboard/connections?connected=intercom`)
 }
 

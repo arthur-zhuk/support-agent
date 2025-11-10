@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/db/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
+import { env } from '@/lib/env'
 
-const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY!
-const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET!
-const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL!
+const SHOPIFY_API_KEY = env.shopify.apiKey!
+const SHOPIFY_API_SECRET = env.shopify.apiSecret!
 
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams
@@ -12,9 +12,26 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get('code')
   const state = searchParams.get('state')
   const tenantId = state || searchParams.get('tenantId')
+  const error = searchParams.get('error')
+  const errorDescription = searchParams.get('error_description')
+
+  if (error) {
+    console.error('Shopify OAuth error:', error, errorDescription)
+    return NextResponse.redirect(
+      `${env.shopify.appUrl}/dashboard/connections?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || '')}`
+    )
+  }
 
   if (!shop || !code || !tenantId) {
-    return NextResponse.json({ error: 'Missing parameters' }, { status: 400 })
+    const missing = []
+    if (!shop) missing.push('shop')
+    if (!code) missing.push('code')
+    if (!tenantId) missing.push('tenantId')
+    console.error('Missing Shopify OAuth parameters:', missing.join(', '))
+    return NextResponse.json(
+      { error: 'Missing parameters', missing },
+      { status: 400 }
+    )
   }
 
   const hmac = searchParams.get('hmac')
@@ -53,6 +70,9 @@ export async function GET(req: NextRequest) {
   }
 
   const { access_token, scope } = await response.json()
+  console.log(`[Shopify OAuth] Received scopes: ${scope}`)
+  const scopesArray = scope.split(',').map((s: string) => s.trim())
+  console.log(`[Shopify OAuth] Scopes array:`, scopesArray)
 
   await prisma.connection.upsert({
     where: {
@@ -65,16 +85,16 @@ export async function GET(req: NextRequest) {
       tenantId,
       type: 'shopify',
       token: access_token,
-      scopes: scope.split(','),
+      scopes: scopesArray,
       metadata: { shop },
     },
     update: {
       token: access_token,
-      scopes: scope.split(','),
+      scopes: scopesArray,
       metadata: { shop },
     },
   })
 
-  return NextResponse.redirect(`${SHOPIFY_APP_URL}/dashboard/connections?connected=shopify`)
+  return NextResponse.redirect(`${env.shopify.appUrl}/dashboard/connections?connected=shopify`)
 }
 
