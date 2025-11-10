@@ -2,7 +2,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/db/prisma'
 import type { NextAuthConfig } from 'next-auth'
 import EmailProvider from 'next-auth/providers/email'
-import ResendProvider from 'next-auth/providers/resend'
+import { ResendEmailProvider } from '@/lib/auth/resend-provider'
 
 // Helper function to ensure tenant exists for a user
 async function ensureTenantForUser(email: string, name?: string | null) {
@@ -65,31 +65,12 @@ const getEmailProvider = () => {
   })
   
   if (apiKey) {
-    console.log('[Auth Config] Using built-in Resend provider')
-    // The built-in Resend provider accesses provider.apiKey directly
-    // NextAuth merges options into provider, but we ensure apiKey is directly accessible
-    const baseConfig = ResendProvider({
-      apiKey: apiKey,
+    console.log('[Auth Config] Using custom Resend provider')
+    // Use our custom Resend provider that we know works
+    // It reads RESEND_API_KEY directly from env vars in sendVerificationRequest
+    return ResendEmailProvider({
       from: resendFrom,
-    }) as any
-    
-    // Ensure apiKey is directly on the provider object (not just in options)
-    // The provider accesses provider.apiKey in sendVerificationRequest
-    baseConfig.apiKey = apiKey
-    
-    // Also ensure it's in options for NextAuth's internal handling
-    if (baseConfig.options) {
-      baseConfig.options.apiKey = apiKey
-    }
-    
-    console.log('[Auth Config] Resend provider configured:', {
-      hasFrom: !!baseConfig.from,
-      from: baseConfig.from,
-      hasApiKey: !!baseConfig.apiKey,
-      hasOptionsApiKey: !!baseConfig.options?.apiKey,
     })
-    
-    return baseConfig
   }
   
   // Fallback to standard EmailProvider if Resend is not configured
