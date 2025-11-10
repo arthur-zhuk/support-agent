@@ -48,7 +48,10 @@ function LoginForm() {
       if (result?.error) {
         // Handle specific error cases
         if (result.error === 'Configuration') {
-          toast.error('Email service is not configured. Please contact support.')
+          toast.error('Email service is not configured. Please configure SMTP settings.', {
+            duration: 8000,
+            description: 'Set SMTP_HOST, SMTP_USER, and SMTP_PASSWORD environment variables in your Vercel project settings.',
+          })
         } else if (result.error === 'AccessDenied') {
           toast.error('Access denied. Please contact support.')
         } else if (result.error === 'Verification') {
@@ -129,14 +132,44 @@ function LoginForm() {
             <div className="mb-4 rounded-lg bg-destructive/10 border border-destructive/20 p-3">
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
+                <div className="flex-1 space-y-2">
                   <p className="text-sm font-medium text-destructive">Sign in failed</p>
-                  <p className="text-xs text-destructive/80 mt-1">
-                    {error === 'Configuration' && 'Email service is not configured. Please contact support.'}
-                    {error === 'AccessDenied' && 'Access denied. Please contact support.'}
-                    {error === 'Verification' && 'Verification failed. Please try again.'}
-                    {!['Configuration', 'AccessDenied', 'Verification'].includes(error) && 'Please try again or contact support if the problem persists.'}
-                  </p>
+                  {error === 'Configuration' && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-destructive/80">
+                        Email service (SMTP) is not configured. To fix this:
+                      </p>
+                      <ol className="text-xs text-destructive/70 list-decimal list-inside space-y-1 ml-2">
+                        <li>Go to your Vercel project settings</li>
+                        <li>Navigate to Environment Variables</li>
+                        <li>Add the following variables:
+                          <ul className="list-disc list-inside ml-4 mt-1 space-y-0.5">
+                            <li><code className="text-xs bg-destructive/20 px-1 rounded">SMTP_HOST</code> (e.g., smtp.gmail.com)</li>
+                            <li><code className="text-xs bg-destructive/20 px-1 rounded">SMTP_PORT</code> (e.g., 587)</li>
+                            <li><code className="text-xs bg-destructive/20 px-1 rounded">SMTP_USER</code> (your email)</li>
+                            <li><code className="text-xs bg-destructive/20 px-1 rounded">SMTP_PASSWORD</code> (your password/app password)</li>
+                            <li><code className="text-xs bg-destructive/20 px-1 rounded">SMTP_FROM</code> (optional, sender email)</li>
+                          </ul>
+                        </li>
+                        <li>Redeploy your application</li>
+                      </ol>
+                    </div>
+                  )}
+                  {error === 'AccessDenied' && (
+                    <p className="text-xs text-destructive/80">
+                      Access denied. Please contact support.
+                    </p>
+                  )}
+                  {error === 'Verification' && (
+                    <p className="text-xs text-destructive/80">
+                      Verification failed. Please try again.
+                    </p>
+                  )}
+                  {!['Configuration', 'AccessDenied', 'Verification'].includes(error) && (
+                    <p className="text-xs text-destructive/80">
+                      Please try again or contact support if the problem persists.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
