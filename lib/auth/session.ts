@@ -2,6 +2,12 @@ import { auth } from '@/app/api/auth/[...nextauth]/route'
 import { isDevMode, getDevTenantId, getDevUserEmail, ensureDevTenant } from './dev-bypass'
 
 export async function getSession() {
+  const nextAuthSession = await auth()
+  
+  if (nextAuthSession?.user) {
+    return nextAuthSession
+  }
+  
   if (isDevMode()) {
     await ensureDevTenant()
     return {
@@ -19,7 +25,8 @@ export async function getSession() {
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     }
   }
-  return await auth()
+  
+  return nextAuthSession
 }
 
 export async function getCurrentUser() {

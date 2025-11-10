@@ -36,7 +36,7 @@ export default async function DashboardLayout({
               {user && (
                 <span className="text-sm text-muted-foreground hidden md:inline">
                   {user.email}
-                  {process.env.NODE_ENV === 'development' && (
+                  {user.email === 'dev@localhost' && (
                     <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
                       DEV
                     </span>
