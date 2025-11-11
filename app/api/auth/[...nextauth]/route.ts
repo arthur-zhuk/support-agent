@@ -15,6 +15,6 @@ const { handlers, auth, signIn, signOut } = nextAuth
 
 console.log('[NextAuth Route] NextAuth initialized successfully')
 
-export { auth, signIn, signOut }
+export { auth, signIn, signOut, handlers }
 export const { GET, POST } = handlers
 
