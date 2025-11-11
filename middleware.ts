@@ -35,10 +35,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard/connections', request.url))
   }
 
+  if (request.nextUrl.pathname.startsWith('/api/auth/callback')) {
+    return NextResponse.next()
+  }
+
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: [
+    '/dashboard/:path*',
+    '/login',
+    '/api/auth/callback/:path*',
+  ],
 }
 
