@@ -1,10 +1,5 @@
 import { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
-import NextAuth from 'next-auth'
-import { authConfig } from '@/lib/auth/config'
-
-const nextAuth = NextAuth(authConfig)
-const { handlers } = nextAuth
+import { handlers } from '@/app/api/auth/[...nextauth]/route'
 
 export async function GET(request: NextRequest) {
   console.log('[Email Callback] Handling callback:', {
@@ -17,13 +12,14 @@ export async function GET(request: NextRequest) {
     const response = await handlers.GET(request)
     console.log('[Email Callback] Response:', {
       status: response.status,
-      type: response.type,
+      redirected: response.redirected,
+      url: response.url,
     })
     return response
   } catch (error: any) {
     console.error('[Email Callback] Error:', error)
-    return NextResponse.redirect(
-      new URL('/login?error=Verification', request.nextUrl.origin)
+    return Response.redirect(
+      new URL('/login?error=VerificationFailed', request.nextUrl.origin)
     )
   }
 }
