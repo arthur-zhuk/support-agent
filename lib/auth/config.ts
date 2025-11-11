@@ -91,6 +91,7 @@ const getEmailProvider = () => {
 export const authConfig = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [getEmailProvider()],
+  trustHost: true,
   callbacks: {
     async signIn({ user, account, profile }) {
       if (!user.email) {
