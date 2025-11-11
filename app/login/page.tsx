@@ -53,38 +53,34 @@ function LoginForm() {
     setEmailSent(false)
     
     try {
-      const response = await fetch('/api/magic-link/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: trimmedEmail.toLowerCase(),
-          callbackUrl,
-        }),
+      const result = await signIn('email', {
+        email: trimmedEmail.toLowerCase(),
+        redirect: false,
+        callbackUrl,
       })
 
-      const data = await response.json()
-
-      if (!response.ok || data.error) {
-        console.error('[Login] Magic link error:', data)
-        toast.error(data.error || 'Failed to send magic link. Please try again.')
+      if (result?.error) {
+        console.error('[Login] signIn error:', result.error)
+        if (result.error === 'Configuration') {
+          toast.error('Email service is not configured. Please configure email settings.')
+        } else {
+          toast.error(`Failed to send email: ${result.error}`)
+        }
         setLoading(false)
-        return
+      } else if (result?.ok) {
+        setEmailSent(true)
+        toast.success('Magic link sent! Check your email.')
+        setTimeout(() => {
+          router.push('/verify-email')
+        }, 1500)
+      } else {
+        console.error('[Login] Unexpected signIn result:', result)
+        toast.error('An unexpected error occurred. Please try again.')
+        setLoading(false)
       }
-
-      setEmailSent(true)
-      toast.success('Magic link sent! Check your email.')
-      setTimeout(() => {
-        router.push('/verify-email')
-      }, 1500)
     } catch (error: any) {
-      console.error('[Login] Exception during magic link send:', {
-        message: error.message,
-        stack: error.stack,
-      })
-      toast.error('An unexpected error occurred. Please try again.', {
-        duration: 10000,
-        description: error.message || 'Unknown error',
-      })
+      console.error('[Login] Exception during signIn:', error)
+      toast.error('An unexpected error occurred. Please try again.')
       setLoading(false)
     }
   }
